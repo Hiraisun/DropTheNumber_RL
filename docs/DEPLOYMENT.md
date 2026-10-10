@@ -1,6 +1,10 @@
 # ブラウザー公開
 
-更新日: 2026-10-10。Web実装と静的ビルド、手動実行のPages公開ワークフローを用意した。GitHubリモートと公開URLはまだない。
+更新日: 2026-10-10。GitHub Pagesへの初回公開を完了した。公開設定はGitHub Actions、更新は手動実行の「Publish manual game」で行う。
+
+- 公開URL: [https://hiraisun.github.io/DropTheNumber_RL/](https://hiraisun.github.io/DropTheNumber_RL/)
+- 公開リポジトリ: [Hiraisun/DropTheNumber_RL](https://github.com/Hiraisun/DropTheNumber_RL)
+- 初回デプロイ: [Actions run 38038841225](https://github.com/Hiraisun/DropTheNumber_RL/actions/runs/38038841225)、コミット `f4fe0cb`。
 
 ## GitHub Pagesで公開できる構成
 
@@ -14,7 +18,7 @@ GitHub PagesはHTML・CSS・JavaScriptなどの静的ファイルを配信する
 
 GitHub Freeでは公開リポジトリのPagesを利用できる。非公開リポジトリからの利用可否はプランによる。[GitHubの利用条件](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)
 
-所有者とリポジトリ名は未設定。プロジェクト用URLの形式は `https://<owner>.github.io/<repository>/`。ローカルの名前を採用する場合、ベースパスは `/DropTheNumber_RL/` になる。実際のGitHub名を確定してから設定する。
+所有者は `Hiraisun`、リポジトリ名は `DropTheNumber_RL`。公開先のベースパスは `/DropTheNumber_RL/`。
 
 試作はViteの相対 `base: './'` を使用し、Workerへ公開ディレクトリの絶対URLを渡す。Worker・ランタイム・Pythonソースの取得はそのURLを基準にする。ホストのルートを前提にした `/runtime/...` のようなURLを使わない。[Vite公式の公開手順](https://vite.dev/guide/static-deploy.html#github-pages)
 
@@ -32,9 +36,11 @@ GitHub Freeでは公開リポジトリのPagesを利用できる。非公開リ�
 
 初回アクセスはランタイムの転送・初期化が必要になる。キャッシュによる再訪時との差も測定する。PCとスマートフォンで転送量、操作開始までの時間、1手の応答、操作中の描画停止を記録する。測定前に高速・軽量と断定しない。
 
-## ビルドと公開の予定手順
+## 更新時の公開手順
 
-ローカルの準備・検証・ビルドは[実装手順](IMPLEMENTATION.md)に記載。公開時は次を行う。
+ローカルの準備・検証・ビルドは[実装手順](IMPLEMENTATION.md)に記載。GitHubリモートとPagesの初回設定は完了している。更新時は変更をコミットして `main` へpushし、Actionsの「Publish manual game」→「Run workflow」で `main` を選んで実行する。通常のpushはCI検証だけを実行し、公開版は自動更新しない。
+
+初回公開で行った手順:
 
 1. GitHubリポジトリを作成し、ローカルGitにリモートを設定する。
 2. PythonとWebの依存、Pyodideの版を固定する。
@@ -49,6 +55,8 @@ GitHub Freeでは公開リポジトリのPagesを利用できる。非公開リ�
 `.github/workflows/pages.yml` を追加済み。GitHubでPagesのSourceをGitHub Actionsにして、Actionsの「Publish manual game」を手動実行する。自動検証とビルドが成功した配布物だけを公開する。配布対象は `web/dist/` のみ。動画・観察画像・学習ログ・モデルは含めない。[GitHub ActionsによるPages公開](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
 
 ## 公開確認
+
+2026-10-10、PCのアプリ内ブラウザーで公開URLの起動、数字キー・盤面クリックによる投入、2手の保存と再読み込みを確認。盤面・得点・現在値・予告が一致し、一時停止状態で復元された。スマートフォン実機は未確認。保存はブラウザーのオリジン単位なので、localhostの記録を公開版へ引き継ぐ場合はJSONの書き出し・読み込みを使う。
 
 - PCのChrome・Edgeと、AndroidのChrome・iOSのSafariを初期確認対象にする。利用できた端末・バージョンと未確認の対象を記録する。
 - 初回アクセス、再訪、再読み込みで盤面とランタイムを取得できる。

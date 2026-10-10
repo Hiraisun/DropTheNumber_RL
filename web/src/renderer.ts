@@ -2,12 +2,21 @@ import type { Board, MoveEvent } from './types';
 
 const WIDTH = 450, HEIGHT = 650, CELL = 82, LEFT = 20, TOP = 130, SIZE = 75;
 const palette = [
-  ['#eac9a7', '#735137'], ['#b9d0a2', '#405b36'], ['#e9b377', '#704629'],
-  ['#a8cebf', '#2d6151'], ['#c9c2e4', '#584885'], ['#dfaec4', '#813c5c'],
-  ['#9ebfcf', '#305c70'], ['#e7d078', '#716124'], ['#d4a080', '#754932'],
+  '#eac9a7', '#b9d0a2', '#e9b377', '#a8cebf', '#c9c2e4',
+  '#dfaec4', '#9ebfcf', '#e7d078', '#d4a080',
 ];
+// Solid interior colors sampled from the supplied official-game screenshots.
+const referencePalette: Record<string, string> = {
+  '2': '#c733b2', '4': '#63e238', '8': '#44d3c5', '16': '#347acf',
+  '32': '#d2463e', '64': '#8164f9', '128': '#8c7d79', '256': '#f5a22c',
+  '512': '#ee3166', '1024': '#ae1910', '2048': '#bc19dc', '4096': '#3f96db',
+  '8192': '#46f70e', '16384': '#d6076a', '32768': '#10d58b', '65536': '#f06107',
+};
 
-export function tileColor(value: string) { return palette[Math.max(0, BigInt(value).toString(2).length - 2) % palette.length]; }
+export function tileColor(value: string) {
+  const fallback = palette[Math.max(0, BigInt(value).toString(2).length - 2) % palette.length];
+  return [referencePalette[value] ?? fallback, '#ffffff'];
+}
 export function compact(value: string) { return value.length <= 6 ? value : `${value[0]}.${value.slice(1, 3)}e${value.length - 1}`; }
 export function formatted(value: string) { return new Intl.NumberFormat('ja-JP').format(BigInt(value)); }
 

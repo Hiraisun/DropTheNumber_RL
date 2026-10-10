@@ -32,6 +32,7 @@
           </div>
           <div class="timer-track" aria-hidden="true"><div id="timer-progress"></div></div>
           <div class="game-controls"><label class="switch-label"><input id="auto-drop" type="checkbox" disabled /><span class="switch"></span>自然落下<span id="auto-label">OFF</span></label><button id="pause" class="quiet" disabled>一時停止</button><button id="restart" class="quiet" disabled>新しいゲーム</button></div>
+          <div id="playback-controls" class="playback-controls" hidden><button id="playback-step">1手進む</button><label id="playback-position-label">再生位置 <span id="playback-position">0 / 0</span><input id="playback-seek" type="range" min="0" max="0" value="0" aria-label="リプレイの再生位置"></label><button id="playback-end">終了直前</button></div>
         </section>
         <aside class="side">
           <section class="session-card"><div class="section-heading"><span class="label">THIS GAME</span><span id="session-type" class="badge">通常プレイ</span></div><dl><div><dt>合成した最大値</dt><dd id="max-tile">—</dd></div><div><dt>手数</dt><dd id="moves">0</dd></div><div><dt>生成される数字</dt><dd id="candidates">—</dd></div></dl></section>

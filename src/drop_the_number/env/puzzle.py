@@ -12,7 +12,7 @@ from drop_the_number.core import Game
 class DropNumberEnv(gym.Env):
     metadata = {"render_modes": ["ansi"]}
 
-    def __init__(self, max_steps=1000, reward="log_score", render_mode=None):
+    def __init__(self, max_steps=1000, reward="log_score", render_mode=None, reserved_seeds=()):
         if type(max_steps) is not int or not 1 <= max_steps <= 10000:
             raise ValueError("max_stepsは1～10000です。")
         if reward not in ("log_score", "score") or render_mode not in (None, "ansi"):
@@ -24,6 +24,7 @@ class DropNumberEnv(gym.Env):
         self.finished = True
         self.steps = 0
         self.seen_seeds = set()
+        self.reserved_seeds = set(reserved_seeds)
 
     def _observation(self):
         return np.asarray(observation(self.game), dtype=np.float32)
@@ -36,6 +37,8 @@ class DropNumberEnv(gym.Env):
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
         game_seed = int(seed) if seed is not None else int(self.np_random.integers(0, 2**32))
+        while game_seed in self.reserved_seeds:
+            game_seed = int(self.np_random.integers(0, 2**32))
         self.game = Game.from_snapshot(options["snapshot"]) if options and "snapshot" in options else Game(game_seed)
         if self.game.over:
             raise ValueError("学習の初期盤面は未終了の状態にしてください。")

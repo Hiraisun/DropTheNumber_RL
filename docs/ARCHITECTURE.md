@@ -129,6 +129,10 @@ Gymnasiumの `reset(seed=...)` と `step(action)` を通して共通エンジン
 
 ## ディレクトリ構成
 
+ローカル管理GUIは`dashboard/`の標準ライブラリHTTPサーバー・SQLite・逐次ジョブ管理と、TypeScriptの`dashboard.html`から構成する。学習・検証は別プロセスで既存の`agents/`と`core/`を操作する。観戦・リプレイは同じサーバーで配信する既存ゲームの`index.html`へモデルID・記録IDを渡す。管理画面には盤面処理や描画を複製しない。
+
+`npm run build`は公開ゲームのみ、`npm run build:local`は`dist-local/`に管理GUIと同じゲームをビルドする。管理サーバー・学習ライブラリはブラウザー用エンジン梱包から除外する。実験情報は`artifacts/gui/`に保存し、公開モデルの更新は既存の公開手順から行う。詳細は[GUI仕様](GUI_SPEC.md)。
+
 共通エンジン・画面・検証・公開ワークフローは実装済み。`env/`・`agents/`・`configs/` も初期実装済み。現在の記録処理は `replay.py`、WorkerのJSON APIは `bridge.py` にある。
 
 ```text
@@ -138,10 +142,12 @@ src/drop_the_number/
   bridge.py      # Worker用JSON API
   env/           # ターン制Gymnasium
   agents/        # 比較基準・PPO学習・標準ライブラリ推論
+  dashboard/     # ローカルHTTP API・SQLite・ジョブ子プロセス
 web/
   src/           # TypeScript画面・Pyodide Worker連携
   public/        # 配信用の固定版ランタイム・エンジン（生成物）
   dist/          # Pagesに公開するビルド結果（Git対象外）
+  dist-local/    # 管理GUI＋共通ゲーム（ローカル用、Git対象外）
 scripts/         # エンジン梱包、Web配布準備、動画解析補助
 .github/workflows/  # 検証・静的ビルド・Pages公開
 configs/         # 版付きのルール・実験設定

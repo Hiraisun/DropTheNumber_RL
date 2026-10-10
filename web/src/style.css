@@ -857,3 +857,4 @@ footer {
     transition-duration:.01ms!important
   }
 }
+ .playback-controls{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}.playback-controls label{flex:1;min-width:140px;font-size:12px}.playback-controls input{display:block;width:100%;accent-color:#687f8d}.playback-controls button{font-size:12px}

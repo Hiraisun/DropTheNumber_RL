@@ -9,6 +9,7 @@
     "dev": "npm run prepare:runtime && vite --host 127.0.0.1",
     "check": "tsc --noEmit",
     "build": "npm run prepare:runtime && npm run check && vite build",
+    "build:local": "npm run prepare:runtime && npm run check && vite build --mode dashboard",
     "preview": "vite preview --host 127.0.0.1",
     "test:parity": "node ../scripts/parity.mjs"
   },

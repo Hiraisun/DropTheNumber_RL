@@ -24,4 +24,7 @@ for _ in range(40):
     record({"command": "step", "column": choice["column"], "source": "ai"})
     if calls[-1]["result"]["state"]["over"]: break
 record({"command": "export"})
+session = calls[-1]["result"]
+for index in (0, 1, len(session["actions"]) // 2, len(session["actions"])):
+    record({"command": "seek", "session": session, "index": index})
 print(json.dumps(calls))

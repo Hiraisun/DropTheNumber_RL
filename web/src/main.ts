@@ -11,6 +11,8 @@ let client: EngineClient, state: Snapshot | undefined;
 let busy = true, ready = false, paused = false, diagnostic = false, replaying = false;
 let selected = 2, turnStart = performance.now(), pauseProgress = 0, replayRun = 0;
 let imported: Session | undefined;
+let replayPosition = 0;
+const handoff = new URLSearchParams(location.search);
 let best = '0';
 let latency: number[] = [];
 let runtimeLabel = '';
@@ -25,6 +27,7 @@ function resetTimer(progress = 0) { turnStart = performance.now() - PERIOD * pro
 function timerProgress() { return paused ? pauseProgress : Math.min(1, Math.max(0, (performance.now() - turnStart) / PERIOD)); }
 function setPaused(value: boolean) {
   if (aiMode) { if (value) stopAI(); else void runAI(); return; }
+  if (imported) { if (value) { replayRun++; paused = true; controls(); } else void playReplay(); return; }
   if (!ready || busy && !replaying || state?.over) return;
   if (value) { pauseProgress = timerProgress(); paused = true; if (replaying) replayRun++; }
   else { paused = false; resetTimer(pauseProgress); }
@@ -36,14 +39,21 @@ function controls() {
   for (const id of ['restart', 'export', 'import', 'apply-diagnostic', 'load-preset']) el<HTMLButtonElement>(id).disabled = locked;
   el<HTMLButtonElement>('restart-over').disabled = locked;
   el<HTMLButtonElement>('pause').disabled = !ready || (!!state?.over) || busy && !replaying && !(aiMode && aiRunning);
-  autoInput.disabled = locked || !!state?.over || aiMode;
+  autoInput.disabled = locked || !!state?.over || aiMode || !!imported;
   el<HTMLButtonElement>('replay').disabled = locked || !imported?.actions.length;
-  el('pause').textContent = replaying ? '再生を停止' : aiMode ? aiRunning ? 'AIを停止' : 'AIを再開' : paused ? '再開' : '一時停止';
-  el('over').hidden = !state?.over;
-  el('paused-cover').hidden = !paused || !!state?.over || !ready;
+  el('pause').textContent = replaying ? '再生を停止' : aiMode ? aiRunning ? 'AIを停止' : 'AIを再開' : imported ? '再生' : paused ? '再開' : '一時停止';
+  el('over').hidden = !state?.over || !!imported;
+  el('paused-cover').hidden = !paused || !!state?.over || !ready || !!imported || aiMode;
   el('auto-label').textContent = autoInput.checked ? 'ON' : 'OFF';
   el('session-type').textContent = aiMode ? 'AIプレイ' : diagnostic ? '診断プレイ' : '通常プレイ';
   for (const id of ['ai-start', 'ai-import', 'ai-agent']) el<HTMLButtonElement>(id).disabled = locked;
+  el('playback-controls').hidden = !imported && !aiMode;
+  el<HTMLButtonElement>('playback-step').disabled = !ready || busy || aiRunning || replaying || !!state?.over || !!imported && replayPosition >= imported.actions.length;
+  el('playback-position-label').hidden = !imported;
+  el('playback-end').hidden = !imported;
+  el<HTMLButtonElement>('playback-end').disabled = locked;
+  el<HTMLInputElement>('playback-seek').disabled = locked;
+  if (imported) { el<HTMLInputElement>('playback-seek').max = String(imported.actions.length); el<HTMLInputElement>('playback-seek').value = String(replayPosition); el('playback-position').textContent = `${replayPosition} / ${imported.actions.length}`; }
 }
 
 function apply(result: Result) {
@@ -89,7 +99,7 @@ function animate(event: MoveEvent, duration: number) {
 }
 
 async function drop(column: number, source = 'manual') {
-  if (!ready || busy || paused || state?.over || replaying && source !== 'replay' || aiMode && source !== 'ai') return false;
+  if (!ready || busy || paused || state?.over || imported && source !== 'replay' || replaying && source !== 'replay' || aiMode && source !== 'ai') return false;
   selected = column; renderer.selected = column;
   const elapsed = Math.round(performance.now() - turnStart);
   busy = true; clearError(); controls(); el('gain').textContent = '';
@@ -103,6 +113,7 @@ async function drop(column: number, source = 'manual') {
     if (!result.accepted) { showError(result.reason!); return false; }
     for (const event of result.events) await animate(event, event.kind === 'drop' ? source === 'auto' ? 0 : 170 : event.kind === 'gravity' ? 130 : event.kind === 'merge' ? 160 : 0);
     apply(result);
+    if (source === 'replay') replayPosition++;
     if (result.score_delta !== '0') el('gain').textContent = `+${formatted(result.score_delta!)}`;
     if (!diagnostic && !replaying && BigInt(state!.score) > BigInt(best)) {
       best = state!.score; el('best').textContent = formatted(best);
@@ -141,7 +152,7 @@ async function boot() {
     el('runtime-info').textContent = runtimeLabel;
     let saved: string | null = null, loaded = false;
     try { saved = localStorage.getItem(STORAGE); } catch { /* Storage may be unavailable. */ }
-    if (saved) {
+    if (saved && !handoff.has('model') && !handoff.has('job')) {
       try {
         const result = await client.request<Result>({ command: 'import', session: JSON.parse(saved) });
         apply(result); autoInput.checked = result.settings?.auto_drop ?? false;
@@ -152,6 +163,7 @@ async function boot() {
       apply(await client.request<Result>({ command: 'new', seed: crypto.getRandomValues(new Uint32Array(1))[0] }));
     }
     ready = true; busy = false; el('loading').hidden = true; resetTimer(); controls();
+    if (handoff.has('model') || handoff.has('job')) await loadHandoff();
   } catch (error) {
     el('loading-title').textContent = '読み込みできませんでした';
     el('loading-status').textContent = errorMessage(error); el('retry').hidden = false;
@@ -251,7 +263,8 @@ el('board').addEventListener('pointerup', event => {
   pointerStart = undefined;
 });
 window.addEventListener('keydown', event => {
-  if (event.repeat || !ready || replaying || (event.target as HTMLElement)?.closest('input, textarea, select, summary')) return;
+  if (event.repeat || !ready || (event.target as HTMLElement)?.closest('input, textarea, select, summary')) return;
+  if (imported) { if (event.key.toLowerCase() === 'p') { event.preventDefault(); setPaused(!paused); } return; }
   if (aiMode) { if (event.key.toLowerCase() === 'p') { event.preventDefault(); setPaused(!paused); } return; }
   if (busy) return;
   if (/^[1-5]$/.test(event.key)) { event.preventDefault(); void drop(Number(event.key) - 1); }
@@ -302,27 +315,64 @@ el<HTMLInputElement>('file').addEventListener('change', async event => {
     const session: Session = JSON.parse(await file.text());
     const result = await client.request<Result>({ command: 'import', session });
     stopAI(); aiMode = false;
-    imported = session; autoInput.checked = result.settings!.auto_drop; paused = true;
+    imported = session; replayPosition = session.actions.length; autoInput.checked = false; paused = true;
     apply(result); el('gain').textContent = ''; await persist();
   } catch (error) { showError(errorMessage(error)); }
   finally { input.value = ''; busy = false; resetTimer(); controls(); }
 });
-el('replay').addEventListener('click', async () => {
+async function seekReplay(index: number) {
   if (!imported || busy) return;
-  const original = imported, run = ++replayRun;
+  replayRun++; stopAI(); aiMode = false;
   busy = true; clearError(); controls();
   try {
-    const initial = { ...original, actions: [], final: original.initial, settings: { ...original.settings, auto_drop: false } };
-    const result = await client.request<Result>({ command: 'import', session: initial });
-    stopAI(); aiMode = false; autoInput.checked = false; paused = false; apply(result); replaying = true; busy = false; controls();
-    for (const action of original.actions) {
+    const result = await client.request<Result>({ command: 'seek', session: imported, index });
+    replayPosition = index; paused = true; autoInput.checked = false; apply(result);
+  } catch (error) { showError(errorMessage(error)); }
+  finally { busy = false; resetTimer(); controls(); }
+}
+
+async function playReplay() {
+  if (!imported || busy || replaying) return;
+  if (replayPosition >= imported.actions.length) await seekReplay(0);
+  const original = imported, run = ++replayRun;
+  replaying = true; paused = false; clearError(); controls();
+  try {
+    while (replayPosition < original.actions.length) {
       if (run !== replayRun) break;
-      if (!await drop(action.column, 'replay')) throw new Error('記録の再生を継続できませんでした。');
-      await new Promise(resolve => setTimeout(resolve, 250));
+      if (!await drop(original.actions[replayPosition].column, 'replay')) throw new Error('記録の再生を継続できませんでした。');
+      await new Promise(resolve => setTimeout(resolve, Number(el<HTMLSelectElement>('ai-speed').value)));
     }
   } catch (error) { showError(errorMessage(error)); }
   finally { replaying = false; busy = false; paused = true; resetTimer(); controls(); }
+}
+el('replay').addEventListener('click', () => { void playReplay(); });
+el('playback-end').addEventListener('click', () => { if (imported) void seekReplay(Math.max(0, imported.actions.length - 1)); });
+el<HTMLInputElement>('playback-seek').addEventListener('change', () => { void seekReplay(Number(el<HTMLInputElement>('playback-seek').value)); });
+el('playback-step').addEventListener('click', async () => {
+  if (busy || replaying || aiRunning) return;
+  try {
+    if (aiMode) { busy = true; controls(); await ensurePolicy(); const action = await client.request<{ column: number }>({ command: 'ai-action', agent: el<HTMLSelectElement>('ai-agent').value }); busy = false; paused = false; await drop(action.column, 'ai'); paused = true; }
+    else if (imported && replayPosition < imported.actions.length) { paused = false; await drop(imported.actions[replayPosition].column, 'replay'); paused = true; }
+  } catch (error) { showError(errorMessage(error)); }
+  finally { busy = false; controls(); }
 });
+async function loadHandoff() {
+  busy = true; controls();
+  try {
+    const response = await fetch('/api/view?' + handoff.toString(), { cache: 'no-store' });
+    const data = await response.json(); if (!response.ok) throw Error(data.error);
+    if (data.policy) {
+      await loadPolicy(data.policy); el<HTMLSelectElement>('ai-agent').value = 'ppo';
+      aiMode = true; paused = true; imported = undefined; autoInput.checked = false;
+      apply(await client.request<Result>({ command: 'new', seed: data.seed, diagnostic: true, auto_drop: false }));
+    } else {
+      await client.request<Result>({ command: 'import', session: data.session });
+      imported = data.session; aiMode = false; replayPosition = 0; paused = true; autoInput.checked = false;
+      apply(await client.request<Result>({ command: 'seek', session: imported, index: 0 }));
+    }
+  } catch (error) { showError(errorMessage(error)); }
+  finally { busy = false; controls(); }
+}
 document.addEventListener('visibilitychange', () => { if (document.hidden && ready && !state?.over) { if (aiMode) stopAI(); pauseProgress = timerProgress(); paused = true; if (replaying) replayRun++; controls(); } });
 
 function frame() {

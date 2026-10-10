@@ -36,6 +36,20 @@ def dispatch(raw):
         game, session = reconstruct(request["session"])
         _game, _session = game, session
         result = {"state": _game.snapshot(), "events": [], "settings": session["settings"]}
+    elif command == "seek":
+        original = request["session"]
+        reconstruct(original)  # Validate the complete record before changing active state.
+        index = request["index"]
+        if type(index) is not int or not 0 <= index <= len(original["actions"]):
+            raise ValueError("再生位置が不正です。")
+        partial = deepcopy(original)
+        partial.pop("final", None)
+        partial["actions"] = original["actions"][:index]
+        partial["settings"]["auto_drop"] = False
+        partial["diagnostic"] = True
+        game, session = reconstruct(partial)
+        _game, _session = game, session
+        result = {"state": game.snapshot(), "events": [], "settings": session["settings"]}
     elif command == "fixtures":
         results = []
         for fixture in request["fixtures"]:

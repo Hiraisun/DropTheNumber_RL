@@ -169,9 +169,13 @@ async function loadPolicy(policy: unknown) {
 
 async function ensurePolicy() {
   if (el<HTMLSelectElement>('ai-agent').value !== 'ppo' || aiModelLoaded) return;
-  const response = await fetch(new URL('ai/ppo.json', new URL(import.meta.env.BASE_URL, document.baseURI)), { cache: 'no-cache' });
-  if (!response.ok) throw new Error('PPOモデルを読み込めませんでした。');
-  await loadPolicy(await response.json());
+  const wasBusy = busy;
+  busy = true; controls();
+  try {
+    const response = await fetch(new URL('ai/ppo.json', new URL(import.meta.env.BASE_URL, document.baseURI)), { cache: 'no-cache' });
+    if (!response.ok) throw new Error('PPOモデルを読み込めませんでした。');
+    await loadPolicy(await response.json());
+  } finally { busy = wasBusy; controls(); }
 }
 
 async function runAI() {

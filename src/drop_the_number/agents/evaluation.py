@@ -1,0 +1,48 @@
+"""Same seeds, same engine, exact browser-compatible records for all agents."""
+
+import json
+from math import fsum, sqrt
+from pathlib import Path
+from time import perf_counter
+
+from drop_the_number.core import Game
+from drop_the_number.replay import new_session
+
+
+def episode(agent, seed, max_steps=1000):
+    game = Game(seed)
+    session = new_session(game, diagnostic=True)
+    inference = 0.0
+    while not game.over and len(session["actions"]) < max_steps:
+        start = perf_counter()
+        column = agent.choose(game)
+        inference += perf_counter() - start
+        result = game.step(column)
+        if not result["accepted"]:
+            raise RuntimeError("AIが不正な行動を選択しました。")
+        session["actions"].append({"column": column, "source": "ai", "elapsed_ms": 0})
+    session["final"] = game.snapshot()
+    session["generated"] = game.generated.copy()
+    metrics = {"seed": seed, "score": str(game.score), "merged_max": str(game.merged_max),
+               "moves": game.moves, "terminated": game.over, "truncated": not game.over,
+               "inference_ms_per_move": inference * 1000 / max(1, game.moves)}
+    return metrics, session
+
+
+def evaluate(factory, seeds, max_steps=1000, replay_path=None):
+    rows = []
+    for index, seed in enumerate(seeds):
+        row, session = episode(factory(seed), seed, max_steps)
+        rows.append(row)
+        if index == 0 and replay_path is not None:
+            path = Path(replay_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(session, ensure_ascii=False), encoding="utf-8")
+    scores = [int(row["score"]) for row in rows]
+    mean = fsum(scores) / len(scores)
+    return {"episodes": rows, "mean_score": mean,
+            "score_std": sqrt(fsum((s - mean) ** 2 for s in scores) / len(scores)),
+            "mean_moves": fsum(row["moves"] for row in rows) / len(rows),
+            "max_merged": str(max(int(row["merged_max"]) for row in rows)),
+            "truncated_episodes": sum(row["truncated"] for row in rows),
+            "mean_inference_ms": fsum(row["inference_ms_per_move"] for row in rows) / len(rows)}

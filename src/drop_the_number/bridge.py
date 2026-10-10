@@ -4,19 +4,28 @@ import json
 from copy import deepcopy
 
 from .core import Game
+from .agents.baselines import GreedyAgent, RandomAgent
+from .agents.policy import Policy
 from .replay import new_session, reconstruct
 
 _game = None
 _session = None
+_policy = None
+_random = RandomAgent()
 
 
 def dispatch(raw):
-    global _game, _session
+    global _game, _session, _policy, _random
     request = json.loads(raw)
     command = request["command"]
+    if command == "load-policy":
+        policy = Policy(request["policy"])
+        _policy = policy
+        return json.dumps({"name": policy.name})
     if command == "new":
         game = Game(seed=request.get("seed", 1))
-        session = new_session(game, request.get("auto_drop", False))
+        session = new_session(game, request.get("auto_drop", False), diagnostic=request.get("diagnostic", False))
+        _random = RandomAgent(game.seed ^ 0xA5A5A5A5)
         _game, _session = game, session
         result = {"state": _game.snapshot(), "events": []}
     elif command == "diagnostic":
@@ -37,7 +46,13 @@ def dispatch(raw):
     else:
         if _game is None:
             raise ValueError("ゲームを先に初期化してください。")
-        if command == "step":
+        if command == "ai-action":
+            kind = request["agent"]
+            agent = {"random": _random, "greedy": GreedyAgent(), "ppo": _policy}.get(kind)
+            if agent is None:
+                raise ValueError("AIモデルを先に読み込んでください。")
+            return json.dumps({"column": agent.choose(_game)})
+        elif command == "step":
             if len(_session["actions"]) >= 10000:
                 raise ValueError("試作版の記録上限10000手に達しました。新しいゲームを開始してください。")
             result = _game.step(request["column"])

@@ -30,7 +30,7 @@ GitHub Freeでは公開リポジトリのPagesを利用できる。非公開リ�
 - ランタイムの必要なファイルをビルドで準備し、同じ公開先から配信する方針。全追加パッケージを含む配布物を無条件に読み込まない。
 - 同一コミットの共通エンジンのPythonソースを `engine/source.json` に梱包し、Workerで仮想ファイルシステムへ配置する。
 - WASMなどの配信形式と、取得先・必要なCORS条件が正しいことを公開URLで確認する。
-- ブラウザーには学習用ライブラリを配布しない。
+- ブラウザーには学習用ライブラリを配布しない。`web/public/ai/ppo.json` のactor重みを静的配信し、同じWorker内の標準ライブラリだけで推論する。[AIの手順](AI.md)
 
 配布物の構成は固定するPyodideの版に合わせて実装する。[ランタイム配布の公式資料](https://pyodide.org/en/stable/usage/downloading-and-deploying.html)、[自作Pythonコードの読み込み](https://pyodide.org/en/stable/usage/loading-custom-python-code.html)
 
@@ -52,7 +52,7 @@ GitHub Freeでは公開リポジトリのPagesを利用できる。非公開リ�
 8. Actionsで静的配布物をアップロードし、Pagesへデプロイする。
 9. 実際の公開URLで下記の確認を行う。
 
-`.github/workflows/pages.yml` を追加済み。GitHubでPagesのSourceをGitHub Actionsにして、Actionsの「Publish manual game」を手動実行する。自動検証とビルドが成功した配布物だけを公開する。配布対象は `web/dist/` のみ。動画・観察画像・学習ログ・モデルは含めない。[GitHub ActionsによるPages公開](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
+`.github/workflows/pages.yml` を追加済み。GitHubでPagesのSourceをGitHub Actionsにして、Actionsの「Publish manual game」を手動実行する。自動検証とビルドが成功した配布物だけを公開する。配布対象は `web/dist/` のみ。動画・観察画像・学習ログ・SB3の学習状態は含めない。公開する推論用JSONモデルは含める。[GitHub ActionsによるPages公開](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
 
 ## 公開確認
 

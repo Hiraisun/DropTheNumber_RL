@@ -17,8 +17,8 @@ async function collect(directory, prefix) {
   for (const item of await readdir(directory, { withFileTypes: true })) {
     const source = path.join(directory, item.name);
     const relative = `${prefix}/${item.name}`;
-    if (item.isDirectory() && item.name !== '__pycache__') await collect(source, relative);
-    else if (item.isFile() && item.name.endsWith('.py')) files[relative] = await readFile(source, 'utf8');
+    if (item.isDirectory() && !['__pycache__', 'env'].includes(item.name)) await collect(source, relative);
+    else if (item.isFile() && item.name.endsWith('.py') && !['training.py', 'ai.py', 'evaluation.py'].includes(item.name)) files[relative] = await readFile(source, 'utf8');
   }
 }
 await collect(path.join(root, 'src/drop_the_number'), 'drop_the_number');

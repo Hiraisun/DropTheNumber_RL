@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const pythonPath = process.env.PARITY_PYTHON || path.join(root, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 const reference = spawnSync(pythonPath, [path.join(root, 'scripts/parity_reference.py')], { cwd: root, encoding: 'utf8' });
 if (reference.status !== 0) throw new Error(reference.stderr || 'CPython reference failed');
-const { request, results } = JSON.parse(reference.stdout);
+const calls = JSON.parse(reference.stdout);
 const runtime = path.join(root, 'web/node_modules/pyodide');
 const { loadPyodide } = await import(pathToFileURL(path.join(runtime, 'pyodide.mjs')).href);
 const pyodide = await loadPyodide({ indexURL: runtime });
@@ -22,7 +22,9 @@ async function copySources(source, prefix) {
 await copySources(path.join(root, 'src/drop_the_number'), '/game/drop_the_number');
 pyodide.runPython('import sys\nsys.path.insert(0, "/game")\nfrom drop_the_number.bridge import dispatch');
 const dispatch = pyodide.globals.get('dispatch');
-const actual = JSON.parse(dispatch(JSON.stringify(request)));
+for (const { request, result } of calls) {
+  const actual = JSON.parse(dispatch(JSON.stringify(request)));
+  assert.deepEqual(actual, result);
+}
 dispatch.destroy();
-assert.deepEqual(actual, results);
-console.log(`CPython / Pyodide ${pyodide.version}: ${actual.length} fixtures match, including every event and random state.`);
+console.log(`CPython / Pyodide ${pyodide.version}: ${calls[0].result.length} fixtures and ${calls.length - 1} AI calls match, including actions, events, and random state.`);

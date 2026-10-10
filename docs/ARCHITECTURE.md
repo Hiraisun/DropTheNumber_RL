@@ -1,6 +1,6 @@
 # 環境と設計
 
-更新日: 2026-10-10。共通エンジン・Pyodide Worker・ブラウザー画面・保存とリプレイを試作として実装済み。以下には第二段階の予定も含む。具体的な起動手順と暫定設定は[IMPLEMENTATION.md](IMPLEMENTATION.md)を参照。ゲームルールの完全な確定は未完了。
+更新日: 2026-10-10。共通エンジン・Pyodide Worker・ブラウザー画面・保存とリプレイを試作として実装済み。ローカルPPO学習とブラウザー推論も初期実装済み。[AIの詳細](AI.md)を参照。具体的な起動手順と暫定設定は[IMPLEMENTATION.md](IMPLEMENTATION.md)を参照。ゲームルールの完全な確定は未完了。
 
 ## 構成の選択
 
@@ -22,15 +22,15 @@
 | 言語 | エンジン: Python。画面: TypeScript | エンジンと学習: Python |
 | 環境管理 | Python: uvと `.venv`。Web: Node.js LTSとnpm | 学習用の追加依存をPython側で管理 |
 | ゲーム処理 | 標準ライブラリ中心のPythonをPyodide Worker内で実行 | 同じエンジンをCPythonで描画なしで直接実行 |
-| 画面 | Vite、Canvas 2D、HTML/CSS | 同じ画面でリプレイ。リアルタイムAI観戦は別の接続方式を検討 |
-| 公開 | GitHub Actionsで静的ビルドをGitHub Pagesへ配信 | 学習はローカルで実行。Pagesにはゲームと必要なリプレイを配信 |
+| 画面 | Vite、Canvas 2D、HTML/CSS | 同じ画面でリプレイとAI観戦。JSON actorをPyodide内で推論 |
+| 公開 | GitHub Actionsで静的ビルドをGitHub Pagesへ配信 | 学習はローカルで実行。Pagesにはゲームと推論用JSONモデルを配信 |
 | 検証 | pytest、Webの型・ビルド確認、ブラウザー操作確認、両ランタイムで同じ遷移データを検証 | 環境API、評価、手動プレイとの一致を追加 |
 | AI | 導入しない | Gymnasium、PyTorch、Stable-Baselines3 |
-| 実験記録 | ルール版、操作・生成・イベントのログ | 学習設定、seed、モデル、評価結果、TensorBoard |
+| 実験記録 | ルール版、操作・生成・イベントのログ | 学習設定、seed、モデル、評価結果、進捗JSON |
 
-開発はCPython 3.12.7、Node.js 22.17.0、Pyodide 314.0.7（Python 3.14.2）。5件のfixtureを両Pythonランタイムで照合する。GPUと学習用依存は第二段階で確認する。
+開発はCPython 3.12.7、Node.js 22.17.0、Pyodide 314.0.7（Python 3.14.2）。9件のfixtureとAI操作を両Pythonランタイムで照合する。初期学習はCPU専用Torchを使用する。
 
-Python依存は `pyproject.toml` と `uv.lock`、Web依存は `web/package.json` と `web/package-lock.json` で管理し、Pyodideも固定版にしている。NumPyは学習用の観測変換で利用する予定で、共通エンジンの必須依存にはしない。ブラウザーにはGymnasium・PyTorch・学習用パッケージを読み込まない。
+Python依存は `pyproject.toml` と `uv.lock`、Web依存は `web/package.json` と `web/package-lock.json` で管理し、Pyodideも固定版にしている。NumPyは学習用の観測変換で利用し、共通エンジンの必須依存にはしない。ブラウザーにはGymnasium・PyTorch・学習用パッケージを読み込まない。
 
 参考資料:
 
@@ -51,7 +51,8 @@ flowchart LR
     Human[PC・スマートフォンの操作] --> UI[TypeScript画面]
     UI --> Worker[Pyodide Web Worker]
     Worker --> WebCore[共通Pythonエンジン]
-    Agent[第二段階のAI] --> Env[Gymnasium環境]
+    Model[JSON actor] --> Worker
+    Agent[PPO・比較AI] --> Env[Gymnasium環境]
     Env --> NativeCore[同じエンジンをCPythonで実行]
     WebCore --> Replay[共通形式のリプレイ]
     NativeCore --> Replay
@@ -124,19 +125,19 @@ Gymnasiumの `reset(seed=...)` と `step(action)` を通して共通エンジン
 
 合法な行動は終了条件の確認後に定義する。満杯列でも合体できる仕様なら高さだけで除外しない。ゲームオーバーになる合法手を単に除外して原作の行動を変えない。
 
-報酬はまずゲーム得点の増分を使う候補とし、補助報酬の追加は別実験として記録する。ゲームの終了と実験上の手数・時間上限による打ち切りを区別する。
+初期報酬はlog2(1 + 得点増分)/16。設定で得点増分/256にも対応し、補助報酬の追加は別実験として記録する。ゲームの終了と実験上の手数・時間上限による打ち切りを区別する。
 
-## 将来のディレクトリ構成
+## ディレクトリ構成
 
-共通エンジン・画面・検証・公開ワークフローは実装済み。`env/`・`agents/`・`configs/` は第二段階以降の予定。現在の記録処理は `replay.py`、WorkerのJSON APIは `bridge.py` にある。
+共通エンジン・画面・検証・公開ワークフローは実装済み。`env/`・`agents/`・`configs/` も初期実装済み。現在の記録処理は `replay.py`、WorkerのJSON APIは `bridge.py` にある。
 
 ```text
 src/drop_the_number/
   core/          # ルール・状態・生成・遷移
   replay.py      # 記録・再生
   bridge.py      # Worker用JSON API
-  env/           # 第二段階: Gymnasium
-  agents/        # 第二段階: 比較基準・学習
+  env/           # ターン制Gymnasium
+  agents/        # 比較基準・PPO学習・標準ライブラリ推論
 web/
   src/           # TypeScript画面・Pyodide Worker連携
   public/        # 配信用の固定版ランタイム・エンジン（生成物）

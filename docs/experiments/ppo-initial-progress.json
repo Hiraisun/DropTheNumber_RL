@@ -1,0 +1,26 @@
+[
+  {
+    "timesteps": 32768,
+    "seconds": 26.730604700016556,
+    "validation_mean_score": 115.75,
+    "validation_mean_moves": 19.875
+  },
+  {
+    "timesteps": 65536,
+    "seconds": 55.73920989999897,
+    "validation_mean_score": 181.25,
+    "validation_mean_moves": 24.5625
+  },
+  {
+    "timesteps": 98304,
+    "seconds": 82.7227481000009,
+    "validation_mean_score": 615.0,
+    "validation_mean_moves": 44.6875
+  },
+  {
+    "timesteps": 131072,
+    "seconds": 109.28626699998858,
+    "validation_mean_score": 621.0,
+    "validation_mean_moves": 51.125
+  }
+]

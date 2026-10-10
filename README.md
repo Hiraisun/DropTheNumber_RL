@@ -7,7 +7,7 @@
 1. **ブラウザーで手動操作できるゲームを実装し、公式アプリとの挙動を比較して公開する。**
 2. **第一段階の検証後、AIの学習・評価を実装する。**
 
-現在はブラウザーで手動プレイできる試作をGitHub Pagesに公開済み。自然落下の切替、保存・再開、リプレイ、任意盤面による診断に対応する。公式との全ケース比較・AI学習は未完了。
+ブラウザーでの手動プレイに加え、ローカルPPO学習・共通seedでの評価・学習済みAIのブラウザー観戦を実装した。自然落下の切替、保存・再開、リプレイ、任意盤面の診断にも対応する。公式との全ケース比較は未完了で、AIは暫定ルール `prototype-v2` を対象にする。
 
 [ブラウザーでプレイ](https://hiraisun.github.io/DropTheNumber_RL/)
 
@@ -32,6 +32,7 @@ npm run dev
 | --- | --- |
 | [開発計画](docs/ROADMAP.md) | 段階ごとの作業、成果物、完了条件 |
 | [実装と起動手順](docs/IMPLEMENTATION.md) | 手動操作、診断、保存・リプレイ、検証コマンド、試作の暫定設定 |
+| [AIの学習と観戦](docs/AI.md) | ローカルPPO学習、評価、モデル読込、初回の結果 |
 | [ゲームルール調査](docs/GAME_RULES.md) | 出典、確認状況、未確定仕様、暫定仕様の扱い |
 | [公式との比較手順](docs/VALIDATION.md) | 確認する場面、証拠の記録、同一性の判定 |
 | [環境と設計](docs/ARCHITECTURE.md) | 技術構成、共通エンジン、再現可能な記録 |
@@ -55,9 +56,9 @@ Android版のアプリID `com.superbox.aos.fire2048` を主な比較対象にす
 
 ゲームエンジンを標準ライブラリ中心のPythonで作り、ブラウザーではPyodideのWeb Worker内で実行する。画面はTypeScript・Vite・Canvas 2DとHTMLで作り、静的ファイルとしてGitHub Pagesへ公開する。PCのマウス・キーボードとスマートフォンのタッチ操作に対応する。
 
-第二段階では同じPythonエンジンをローカルのCPython・Gymnasiumから直接操作し、PyTorchとStable-Baselines3を使ってAIを比較する。初回読み込みと操作応答は、実装初期の小さな試作で測定する。
+同じPythonエンジンをローカルのCPython・Gymnasiumから直接操作し、PyTorchとStable-Baselines3でPPOを学習する。推論重みをJSONに書き出し、公開ブラウザーのPyodide Worker内で実行する。AIでは自然落下を使わない。
 
-`pyproject.toml`・`uv.lock`、`web/package.json`・`package-lock.json` で依存を固定した。Pyodide 314.0.7と標準ライブラリはゲームと同じホストから配信する。学習用ライブラリは未導入。
+`pyproject.toml`・`uv.lock`、`web/package.json`・`package-lock.json` で依存を固定した。Pyodide 314.0.7と標準ライブラリはゲームと同じホストから配信する。学習用ライブラリは `uv sync --frozen --extra rl` で追加する。詳細は[AIの手順](docs/AI.md)。初回モデルは131,072手の学習を実施し、64ゲームの平均得点はPPO 618.6、ランダム368.1、1手先の評価10,185.5。PPOは初期版で、まだ評価関数に劣る。
 
 ## 直近の作業
 

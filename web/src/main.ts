@@ -14,6 +14,7 @@ let imported: Session | undefined;
 let best = '0';
 let latency: number[] = [];
 let runtimeLabel = '';
+let aiMode = false, aiRunning = false, aiRun = 0, aiModelLoaded = false;
 try { const stored = localStorage.getItem(BEST); if (stored && /^\d+$/.test(stored)) best = stored; } catch { /* Playing still works without storage. */ }
 el('best').textContent = formatted(best);
 
@@ -23,6 +24,7 @@ function errorMessage(error: unknown) { const text = error instanceof Error ? er
 function resetTimer(progress = 0) { turnStart = performance.now() - PERIOD * progress; pauseProgress = progress; }
 function timerProgress() { return paused ? pauseProgress : Math.min(1, Math.max(0, (performance.now() - turnStart) / PERIOD)); }
 function setPaused(value: boolean) {
+  if (aiMode) { if (value) stopAI(); else void runAI(); return; }
   if (!ready || busy && !replaying || state?.over) return;
   if (value) { pauseProgress = timerProgress(); paused = true; if (replaying) replayRun++; }
   else { paused = false; resetTimer(pauseProgress); }
@@ -30,17 +32,18 @@ function setPaused(value: boolean) {
 }
 
 function controls() {
-  const locked = !ready || busy || replaying;
+  const locked = !ready || busy || replaying || aiRunning;
   for (const id of ['restart', 'export', 'import', 'apply-diagnostic', 'load-preset']) el<HTMLButtonElement>(id).disabled = locked;
   el<HTMLButtonElement>('restart-over').disabled = locked;
-  el<HTMLButtonElement>('pause').disabled = !ready || (!!state?.over) || busy && !replaying;
-  autoInput.disabled = locked || !!state?.over;
+  el<HTMLButtonElement>('pause').disabled = !ready || (!!state?.over) || busy && !replaying && !(aiMode && aiRunning);
+  autoInput.disabled = locked || !!state?.over || aiMode;
   el<HTMLButtonElement>('replay').disabled = locked || !imported?.actions.length;
-  el('pause').textContent = replaying ? '再生を停止' : paused ? '再開' : '一時停止';
+  el('pause').textContent = replaying ? '再生を停止' : aiMode ? aiRunning ? 'AIを停止' : 'AIを再開' : paused ? '再開' : '一時停止';
   el('over').hidden = !state?.over;
   el('paused-cover').hidden = !paused || !!state?.over || !ready;
   el('auto-label').textContent = autoInput.checked ? 'ON' : 'OFF';
-  el('session-type').textContent = diagnostic ? '診断プレイ' : '通常プレイ';
+  el('session-type').textContent = aiMode ? 'AIプレイ' : diagnostic ? '診断プレイ' : '通常プレイ';
+  for (const id of ['ai-start', 'ai-import', 'ai-agent']) el<HTMLButtonElement>(id).disabled = locked;
 }
 
 function apply(result: Result) {
@@ -86,7 +89,7 @@ function animate(event: MoveEvent, duration: number) {
 }
 
 async function drop(column: number, source = 'manual') {
-  if (!ready || busy || paused || state?.over || replaying && source !== 'replay') return false;
+  if (!ready || busy || paused || state?.over || replaying && source !== 'replay' || aiMode && source !== 'ai') return false;
   selected = column; renderer.selected = column;
   const elapsed = Math.round(performance.now() - turnStart);
   busy = true; clearError(); controls(); el('gain').textContent = '';
@@ -113,6 +116,7 @@ async function drop(column: number, source = 'manual') {
 
 async function newGame() {
   if (busy || !ready) return;
+  stopAI(); aiMode = false;
   busy = true; paused = false; clearError(); controls();
   const input = el<HTMLInputElement>('seed').value;
   const seed = input === '' ? crypto.getRandomValues(new Uint32Array(1))[0] : Number(input);
@@ -125,6 +129,7 @@ async function newGame() {
 }
 
 async function boot() {
+  stopAI(); aiMode = false; aiModelLoaded = false;
   ready = false; busy = true; clearError(); controls();
   el('loading').hidden = false; el('retry').hidden = true;
   el('loading-title').textContent = 'ゲームを準備しています';
@@ -154,6 +159,65 @@ async function boot() {
   }
 }
 
+function stopAI() { aiRunning = false; aiRun++; if (aiMode) paused = true; controls(); }
+
+async function loadPolicy(policy: unknown) {
+  const info = await client.request<{ name: string }>({ command: 'load-policy', policy });
+  aiModelLoaded = true;
+  el('ai-model').textContent = info.name;
+}
+
+async function ensurePolicy() {
+  if (el<HTMLSelectElement>('ai-agent').value !== 'ppo' || aiModelLoaded) return;
+  const response = await fetch(new URL('ai/ppo.json', new URL(import.meta.env.BASE_URL, document.baseURI)), { cache: 'no-cache' });
+  if (!response.ok) throw new Error('PPOモデルを読み込めませんでした。');
+  await loadPolicy(await response.json());
+}
+
+async function runAI() {
+  if (!ready || busy || !aiMode || aiRunning || state?.over || document.hidden) return;
+  const run = ++aiRun;
+  aiRunning = true; paused = false; controls();
+  try {
+    await ensurePolicy();
+    while (aiRunning && run === aiRun && !state?.over && !document.hidden) {
+      const result = await client.request<{ column: number }>({ command: 'ai-action', agent: el<HTMLSelectElement>('ai-agent').value });
+      if (!aiRunning || run !== aiRun || document.hidden) break;
+      if (!await drop(result.column, 'ai')) { stopAI(); break; }
+      await new Promise(resolve => setTimeout(resolve, Number(el<HTMLSelectElement>('ai-speed').value)));
+    }
+  } catch (error) { showError(errorMessage(error)); }
+  finally {
+    if (run === aiRun) { aiRunning = false; paused = !state?.over; controls(); }
+  }
+}
+
+el('ai-start').addEventListener('click', async () => {
+  if (!ready || busy || aiRunning || replaying) return;
+  busy = true; clearError(); controls();
+  let started = false;
+  try {
+    await ensurePolicy();
+    const input = el<HTMLInputElement>('seed').value;
+    const seed = input === '' ? crypto.getRandomValues(new Uint32Array(1))[0] : Number(input);
+    const result = await client.request<Result>({ command: 'new', seed, auto_drop: false, diagnostic: true });
+    aiMode = true; paused = false; autoInput.checked = false; imported = undefined;
+    apply(result); el('gain').textContent = ''; started = true;
+  } catch (error) { showError(errorMessage(error)); }
+  finally { busy = false; resetTimer(); controls(); }
+  if (started) void runAI();
+});
+el('ai-import').addEventListener('click', () => el<HTMLInputElement>('ai-file').click());
+el<HTMLInputElement>('ai-file').addEventListener('change', async event => {
+  const input = event.target as HTMLInputElement, file = input.files?.[0]; if (!file) return;
+  if (busy || aiRunning || replaying) { input.value = ''; return; }
+  if (file.size > 2 * 1024 * 1024) { showError('モデルは2MB以下のJSONで読み込んでください。'); input.value = ''; return; }
+  busy = true; clearError(); controls();
+  try { await loadPolicy(JSON.parse(await file.text())); el<HTMLSelectElement>('ai-agent').value = 'ppo'; }
+  catch (error) { showError(errorMessage(error)); }
+  finally { input.value = ''; busy = false; controls(); }
+});
+
 function columns(stacks: number[][]): Board {
   const board = Array.from({ length: 6 }, () => Array<string>(5).fill('0'));
   stacks.forEach((stack, c) => stack.forEach((n, i) => { board[5 - i][c] = String(n); })); return board;
@@ -174,7 +238,7 @@ function fillPreset() {
   el<HTMLTextAreaElement>('diagnostic-json').value = JSON.stringify(data, null, 2);
 }
 
-el('board').addEventListener('pointermove', event => { if (!busy && !paused && !replaying) { selected = renderer.column(event.clientX); renderer.selected = selected; controls(); } });
+el('board').addEventListener('pointermove', event => { if (!busy && !paused && !replaying && !aiMode) { selected = renderer.column(event.clientX); renderer.selected = selected; controls(); } });
 let pointerStart: [number, number] | undefined;
 el('board').addEventListener('pointerdown', event => { if (event.button === 0) pointerStart = [event.clientX, event.clientY]; });
 el('board').addEventListener('pointercancel', () => { pointerStart = undefined; });
@@ -183,7 +247,9 @@ el('board').addEventListener('pointerup', event => {
   pointerStart = undefined;
 });
 window.addEventListener('keydown', event => {
-  if (event.repeat || !ready || busy || replaying || (event.target as HTMLElement)?.closest('input, textarea, select, summary')) return;
+  if (event.repeat || !ready || replaying || (event.target as HTMLElement)?.closest('input, textarea, select, summary')) return;
+  if (aiMode) { if (event.key.toLowerCase() === 'p') { event.preventDefault(); setPaused(!paused); } return; }
+  if (busy) return;
   if (/^[1-5]$/.test(event.key)) { event.preventDefault(); void drop(Number(event.key) - 1); }
   else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); selected = (selected + (event.key === 'ArrowLeft' ? 4 : 1)) % 5; renderer.selected = selected; controls(); }
   else if ((event.key === 'Enter' || event.key === ' ') && !(event.target instanceof HTMLButtonElement)) { event.preventDefault(); void drop(selected); }
@@ -204,6 +270,7 @@ autoInput.addEventListener('change', async () => {
 el('load-preset').addEventListener('click', fillPreset);
 el('apply-diagnostic').addEventListener('click', async () => {
   if (busy) return;
+  stopAI(); aiMode = false;
   busy = true; clearError(); controls();
   try {
     const result = await client.request<Result>({ command: 'diagnostic', state: JSON.parse(el<HTMLTextAreaElement>('diagnostic-json').value) });
@@ -230,6 +297,7 @@ el<HTMLInputElement>('file').addEventListener('change', async event => {
   try {
     const session: Session = JSON.parse(await file.text());
     const result = await client.request<Result>({ command: 'import', session });
+    stopAI(); aiMode = false;
     imported = session; autoInput.checked = result.settings!.auto_drop; paused = true;
     apply(result); el('gain').textContent = ''; await persist();
   } catch (error) { showError(errorMessage(error)); }
@@ -242,7 +310,7 @@ el('replay').addEventListener('click', async () => {
   try {
     const initial = { ...original, actions: [], final: original.initial, settings: { ...original.settings, auto_drop: false } };
     const result = await client.request<Result>({ command: 'import', session: initial });
-    autoInput.checked = false; paused = false; apply(result); replaying = true; busy = false; controls();
+    stopAI(); aiMode = false; autoInput.checked = false; paused = false; apply(result); replaying = true; busy = false; controls();
     for (const action of original.actions) {
       if (run !== replayRun) break;
       if (!await drop(action.column, 'replay')) throw new Error('記録の再生を継続できませんでした。');
@@ -251,7 +319,7 @@ el('replay').addEventListener('click', async () => {
   } catch (error) { showError(errorMessage(error)); }
   finally { replaying = false; busy = false; paused = true; resetTimer(); controls(); }
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden && ready && !state?.over) { pauseProgress = timerProgress(); paused = true; if (replaying) replayRun++; controls(); } });
+document.addEventListener('visibilitychange', () => { if (document.hidden && ready && !state?.over) { if (aiMode) stopAI(); pauseProgress = timerProgress(); paused = true; if (replaying) replayRun++; controls(); } });
 
 function frame() {
   if (ready && state) {

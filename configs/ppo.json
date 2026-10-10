@@ -1,0 +1,20 @@
+{
+  "schema": "drop-number/train-v1",
+  "algorithm": "ppo",
+  "seed": 20261010,
+  "timesteps": 131072,
+  "n_envs": 4,
+  "n_steps": 256,
+  "batch_size": 256,
+  "n_epochs": 4,
+  "learning_rate": 0.0003,
+  "gamma": 0.995,
+  "ent_coef": 0.01,
+  "hidden": [64, 64],
+  "reward": "log_score",
+  "max_steps": 1000,
+  "checkpoint_steps": 32768,
+  "eval_seed_start": 1000000000,
+  "eval_episodes": 16,
+  "threads": 2
+}

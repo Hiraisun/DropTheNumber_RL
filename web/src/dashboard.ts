@@ -35,6 +35,33 @@ const pending = new Map<string, string>();
 let requestBusy = false;
 let rebuildId = '';
 let parentSequence = 0;
+function normalizeTrainingNames() {
+  const jobs = new Map(state.jobs.map(job => [job.id, job]));
+  const models = new Map(state.models.map(model => [model.id, model]));
+  const names = new Map<string, string>();
+  function resolve(job: Job, visited = new Set<string>()): string {
+    if (names.has(job.id)) return names.get(job.id)!;
+    if (visited.has(job.id)) return job.name;
+    visited.add(job.id);
+    const model = job.parent ? models.get(job.parent) : undefined;
+    const parent = model?.job ? jobs.get(model.job) : undefined;
+    // Remove only a name produced by the old automatic naming rule;
+    // keep names that the user entered or edited.
+    const name = parent && job.name === model!.name + ' / 追加学習' ? resolve(parent, visited) : job.name;
+    names.set(job.id, name);
+    return name;
+  }
+  state.jobs.forEach(job => resolve(job));
+  state.jobs.forEach(job => { job.name = names.get(job.id)!; });
+  state.models.forEach(model => {
+    const job = model.job ? jobs.get(model.job) : undefined;
+    if (job && model.id.startsWith(job.id + '-step-')) model.name = `${job.name} / ${model.timesteps}手`;
+  });
+}
+function experimentLabel(job: Job) {
+  const parent = job.parent ? state.models.find(model => model.id === job.parent) : undefined;
+  return parent ? `${job.name}（${parent.timesteps.toLocaleString('ja-JP')}手から）` : job.name;
+}
 function showError(e: unknown) { $('error-text').textContent = e instanceof Error ? e.message : String(e); $('error').hidden = false; }
 function confirmAction(message: string) {
   const dialog = $<HTMLDialogElement>('confirm-dialog'); $('confirm-message').textContent = message;
@@ -99,7 +126,7 @@ async function parentChanged() {
   updateTrainingButton();
   if (model) {
     const submit = $('training-form').querySelector<HTMLButtonElement>('button[type=submit]')!; submit.disabled = true;
-    try { const result = await api('view?model=' + encodeURIComponent(model.id)); if (sequence !== parentSequence) return; fill({ ...result.policy.metadata.config, timesteps: 131072, seed: crypto.getRandomValues(new Uint32Array(1))[0] }); input('name').value = model.name + ' / 追加学習'; }
+    try { const result = await api('view?model=' + encodeURIComponent(model.id)); if (sequence !== parentSequence) return; fill({ ...result.policy.metadata.config, timesteps: 131072, seed: crypto.getRandomValues(new Uint32Array(1))[0] }); input('name').value = state.jobs.find(job => job.id === model.job)?.name || model.name; }
     catch (e) { showError(e); }
     finally { if (sequence === parentSequence) submit.disabled = false; }
   } else {
@@ -171,7 +198,7 @@ function renderJobs() {
   wireJobs($('evaluation-jobs'));
 }
 function renderChart() {
-  const jobs = state.jobs.filter(j => j.kind === 'train' && selectedJobs.has(j.id)), axis = select('axis').value as 'timesteps' | 'seconds', smooth = Number(select('smooth').value);
+  const jobs = state.jobs.filter(j => j.kind === 'train' && selectedJobs.has(j.id)).map(j => ({ ...j, name: experimentLabel(j) })), axis = select('axis').value as 'timesteps' | 'seconds', smooth = Number(select('smooth').value);
   const series = jobs.map(j => ({ job: j, rows: j.history.filter(r => r.validation_mean_score != null && r.validation_complete !== false) }));
   const all = series.flatMap(s => s.rows), width = 1000, height = 260, left = 70, right = 25, top = 20, bottom = 40;
   const colors = ['#91bad9', '#d9ae82', '#92c7a9', '#c5a4d5', '#d78d9c', '#b4bf79'];
@@ -212,7 +239,7 @@ async function updateDetail() {
   if (detailPending) return; detailPending = true;
   try {
     if (detailId) {
-      const detail = await api('job/' + detailId); const job: Job = detail.job;
+      const detail = await api('job/' + detailId); const job: Job = state.jobs.find(job => job.id === detailId) || detail.job;
       $('job-detail').hidden = false; $('detail-title').textContent = job.name;
       $('detail-summary').textContent = `${statuses[job.status]}${job.parent ? ' / 親 ' + job.parent : ''}${job.error ? ' / ' + job.error : ''}`;
       if (editId !== detailId) { input('edit-name').value = job.name; input('edit-note').value = job.note; editId = detailId; }
@@ -231,7 +258,7 @@ $('copy-config').onclick = () => { const job = state.jobs.find(j => j.id === det
 async function poll() {
   if (pollPending) return; pollPending = true;
   try {
-    state = await api('state'); $('connection').textContent = 'ローカル接続'; $('environment').hidden = state.environment.ready;
+    state = await api('state'); normalizeTrainingNames(); $('connection').textContent = 'ローカル接続'; $('environment').hidden = state.environment.ready;
     $('environment-info').textContent = `Python ${state.environment.python ? '導入済' : '不足'} / 学習依存 ${state.environment.rl ? '導入済' : '不足'} / 画面 ${state.environment.built ? '準備済' : '不足'}`;
     if (!selectedJobs.size) { const latest = [...state.jobs].reverse().find(j => j.kind === 'train'); if (latest) selectedJobs.add(latest.id); }
     inventory(); renderJobs(); renderChart(); await updateDetail();

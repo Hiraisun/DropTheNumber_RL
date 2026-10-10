@@ -5,12 +5,12 @@ const palette = [
   '#eac9a7', '#b9d0a2', '#e9b377', '#a8cebf', '#c9c2e4',
   '#dfaec4', '#9ebfcf', '#e7d078', '#d4a080',
 ];
-// Solid interior colors sampled from the supplied official-game screenshots.
+// Screenshot-based fills, softened slightly at the user's request.
 const referencePalette: Record<string, string> = {
-  '2': '#c733b2', '4': '#63e238', '8': '#44d3c5', '16': '#347acf',
-  '32': '#d2463e', '64': '#8164f9', '128': '#8c7d79', '256': '#f5a22c',
-  '512': '#ee3166', '1024': '#ae1910', '2048': '#bc19dc', '4096': '#3f96db',
-  '8192': '#46f70e', '16384': '#d6076a', '32768': '#10d58b', '65536': '#f06107',
+  '2': '#c443b2', '4': '#70da4d', '8': '#56cdc2', '16': '#4782c9',
+  '32': '#cc5751', '64': '#9079f1', '128': '#918481', '256': '#eaa544',
+  '512': '#e44773', '1024': '#b0241b', '2048': '#bc29d9', '4096': '#539bd4',
+  '8192': '#56ea28', '16384': '#d51571', '32768': '#1dd490', '65536': '#ea6a1a',
 };
 
 export function tileColor(value: string) {

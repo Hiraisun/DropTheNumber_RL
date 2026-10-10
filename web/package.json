@@ -1,0 +1,20 @@
+{
+  "name": "drop-the-number-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": { "node": ">=22.12.0" },
+  "scripts": {
+    "prepare:runtime": "node ../scripts/prepare-web.mjs",
+    "dev": "npm run prepare:runtime && vite --host 127.0.0.1",
+    "check": "tsc --noEmit",
+    "build": "npm run prepare:runtime && npm run check && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test:parity": "node ../scripts/parity.mjs"
+  },
+  "devDependencies": {
+    "pyodide": "314.0.7",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}

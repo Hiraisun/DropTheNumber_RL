@@ -1,0 +1,15 @@
+{
+  "id": "OBS-0003-ceiling-end",
+  "origin": "video-observation",
+  "evidence": "docs/observations/OBS-0003-ceiling.md",
+  "limits": "The visible preview was 8 while the final 8 fell. Random state is a prototype setting.",
+  "initial": {
+    "board": [["0","0","0","0","0"],["0","32","0","0","0"],["32","16","0","0","0"],["16","4","0","0","0"],["128","32","0","0","0"],["32","128","0","128","4"]],
+    "current": "8", "next": "8", "score": "944", "merged_max": "128", "seed": 1
+  },
+  "column": 1,
+  "expected": {
+    "board": [["0","8","0","0","0"],["0","32","0","0","0"],["32","16","0","0","0"],["16","4","0","0","0"],["128","32","0","0","0"],["32","128","0","128","4"]],
+    "score": "944", "over": true, "merge_results": []
+  }
+}

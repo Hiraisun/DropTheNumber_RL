@@ -1,6 +1,6 @@
 # ブラウザー公開
 
-更新日: 2026-10-10。これは公開計画であり、まだWeb実装・GitHubリモート・公開URLはない。
+更新日: 2026-10-10。Web実装と静的ビルド、手動実行のPages公開ワークフローを用意した。GitHubリモートと公開URLはまだない。
 
 ## GitHub Pagesで公開できる構成
 
@@ -16,7 +16,7 @@ GitHub Freeでは公開リポジトリのPagesを利用できる。非公開リ�
 
 所有者とリポジトリ名は未設定。プロジェクト用URLの形式は `https://<owner>.github.io/<repository>/`。ローカルの名前を採用する場合、ベースパスは `/DropTheNumber_RL/` になる。実際のGitHub名を確定してから設定する。
 
-リポジトリ配下への公開ではViteの `base` をそのパスに合わせる。Worker、Pyodide、Pythonパッケージ、画像などの取得URLもベースパスを反映する。ホストのルートを前提にした `/runtime/...` のようなURLを使わない。[Vite公式の公開手順](https://vite.dev/guide/static-deploy.html#github-pages)
+試作はViteの相対 `base: './'` を使用し、Workerへ公開ディレクトリの絶対URLを渡す。Worker・ランタイム・Pythonソースの取得はそのURLを基準にする。ホストのルートを前提にした `/runtime/...` のようなURLを使わない。[Vite公式の公開手順](https://vite.dev/guide/static-deploy.html#github-pages)
 
 初期画面は単一ページとし、複雑な履歴型ルーティングを導入しない。公開URLの再読み込みでゲームを開けるようにする。
 
@@ -24,7 +24,7 @@ GitHub Freeでは公開リポジトリのPagesを利用できる。非公開リ�
 
 - Pyodideは固定版を採用し、開発版や変動する最新版のURLへ依存しない。
 - ランタイムの必要なファイルをビルドで準備し、同じ公開先から配信する方針。全追加パッケージを含む配布物を無条件に読み込まない。
-- 共通エンジンを同一コミットから純Pythonパッケージに梱包し、ランタイムへ読み込む。
+- 同一コミットの共通エンジンのPythonソースを `engine/source.json` に梱包し、Workerで仮想ファイルシステムへ配置する。
 - WASMなどの配信形式と、取得先・必要なCORS条件が正しいことを公開URLで確認する。
 - ブラウザーには学習用ライブラリを配布しない。
 
@@ -34,11 +34,11 @@ GitHub Freeでは公開リポジトリのPagesを利用できる。非公開リ�
 
 ## ビルドと公開の予定手順
 
-以下は未実装。存在しないコマンドを現在の起動手順として案内しない。
+ローカルの準備・検証・ビルドは[実装手順](IMPLEMENTATION.md)に記載。公開時は次を行う。
 
 1. GitHubリポジトリを作成し、ローカルGitにリモートを設定する。
 2. PythonとWebの依存、Pyodideの版を固定する。
-3. 共通エンジンの検証を実行し、配信用Pythonパッケージを作る。
+3. 共通エンジンの検証とCPython・Pyodideの出力照合を実行する。
 4. ランタイム・エンジンを配布用ディレクトリへ準備する。
 5. Webの型確認、ブラウザー内のエンジン比較、操作確認を行う。
 6. Viteで `web/dist/` に静的ファイルをビルドする。
@@ -46,7 +46,7 @@ GitHub Freeでは公開リポジトリのPagesを利用できる。非公開リ�
 8. Actionsで静的配布物をアップロードし、Pagesへデプロイする。
 9. 実際の公開URLで下記の確認を行う。
 
-公開ワークフローはゲーム実装と同時に追加する。配布対象は `web/dist/` のみとし、動画の原本、観察画像、学習ログ、モデルを誤って含めない。依存インストールとビルドの後、成功した配布物だけを公開する。[GitHub ActionsによるPages公開](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
+`.github/workflows/pages.yml` を追加済み。GitHubでPagesのSourceをGitHub Actionsにして、Actionsの「Publish manual game」を手動実行する。自動検証とビルドが成功した配布物だけを公開する。配布対象は `web/dist/` のみ。動画・観察画像・学習ログ・モデルは含めない。[GitHub ActionsによるPages公開](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
 
 ## 公開確認
 

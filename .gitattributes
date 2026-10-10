@@ -1,4 +1,6 @@
 * text=auto
+.gitattributes text eol=lf
+.python-version text eol=lf
 *.md text eol=lf
 *.py text eol=lf
 *.toml text eol=lf
@@ -6,3 +8,8 @@
 *.jsonl text eol=lf
 *.yaml text eol=lf
 *.yml text eol=lf
+*.ts text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.mjs text eol=lf
+*.txt text eol=lf

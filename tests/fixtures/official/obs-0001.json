@@ -1,0 +1,15 @@
+{
+  "id": "OBS-0001-basic-merge",
+  "origin": "video-observation",
+  "evidence": "docs/observations/OBS-0001-basic-merge.md",
+  "limits": "Only the t38-39 placement, board and score are compared. Seed, runtime metadata and future draws are prototype settings, not observations.",
+  "initial": {
+    "board": [["0","0","0","0","0"],["0","0","0","0","0"],["0","0","0","0","0"],["32","4","0","0","0"],["16","8","16","0","0"],["32","16","8","2","8"]],
+    "current": "32", "next": "4", "score": "92", "merged_max": "32", "seed": 1
+  },
+  "column": 0,
+  "expected": {
+    "board": [["0","0","0","0","0"],["0","0","0","0","0"],["0","0","0","0","0"],["64","4","0","0","0"],["16","8","16","0","0"],["32","16","8","2","8"]],
+    "score": "156", "over": false, "score_delta": "64", "merge_results": ["64"]
+  }
+}

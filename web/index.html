@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f1e8" />
+    <meta name="description" content="数字を落として、つなげて、大きくする。ブラウザーで遊べる数字パズル。" />
+    <title>Drop Number — 数字をつなぐパズル</title>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead"><a class="wordmark" href="./">DN<span class="mark-dot"></span></a><span class="masthead-caption">DROP NUMBER / PLAY LAB</span><span class="version">PROTOTYPE 01</span></header>
+      <div class="layout">
+        <aside class="intro">
+          <p class="eyebrow"><span class="tiny-square"></span> 数字を、もっと大きく。</p>
+          <h1>DROP<br /><span>NUMBER.</span></h1>
+          <p class="lede">落とす。つなぐ。連鎖する。<br />ひとつの選択から、大きな数字へ。</p>
+          <div class="merge-example" aria-label="16を3個合体すると64"><span>16</span><span>16</span><span>16</span><i>→</i><strong>64</strong></div>
+          <p class="example-note">3個つながれば、2段階アップ。</p>
+          <div class="instructions"><h2>HOW TO PLAY</h2><p>列をタップしてブロックを落とします。<br />下・左右の同じ数字が合体します。</p><p class="keyboard-hint"><kbd>1</kbd>–<kbd>5</kbd> 列に落とす<br /><kbd>←</kbd> <kbd>→</kbd> 列を選ぶ / <kbd>Enter</kbd> 落とす</p></div>
+          <p class="prototype-note">ルール調査中の試作版です。<br />公式との完全な一致は未検証です。</p>
+        </aside>
+        <section class="game" aria-label="ゲーム">
+          <div class="scorebar"><div><span class="label">SCORE</span><strong id="score">0</strong><span id="gain" class="gain"></span></div><div class="best"><span class="label">BEST</span><strong id="best">0</strong></div></div>
+          <div class="nextbar"><span class="mode-label" id="mode-label">ターン制</span><span class="next-label">NEXT</span><span id="next-tile" class="next-tile">—</span></div>
+          <div class="board-wrap">
+            <canvas id="board" width="450" height="650" tabindex="0" aria-label="5列6段の盤面。下の列ボタンか数字キーで操作できます。"></canvas>
+            <p id="board-description" class="sr-only"></p>
+            <div id="loading" class="cover"><div class="loader"></div><strong id="loading-title">ゲームを準備しています</strong><p id="loading-status">初回はPythonランタイムを読み込みます。</p><button id="retry" class="primary" hidden>再試行</button></div>
+            <div id="over" class="cover game-over" hidden><span class="eyebrow">ONE MORE DROP?</span><h2>GAME OVER</h2><p id="over-score"></p><button id="restart-over" class="primary">もう一度遊ぶ</button></div>
+            <div id="paused-cover" class="pause-cover" hidden><span>PAUSED</span><button id="resume" class="primary">再開する</button></div>
+          </div>
+          <div class="column-buttons" aria-label="落とす列"><button data-column="0" disabled aria-label="1列目に落とす">1 <span>↓</span></button><button data-column="1" disabled aria-label="2列目に落とす">2 <span>↓</span></button><button data-column="2" disabled aria-label="3列目に落とす">3 <span>↓</span></button><button data-column="3" disabled aria-label="4列目に落とす">4 <span>↓</span></button><button data-column="4" disabled aria-label="5列目に落とす">5 <span>↓</span></button></div>
+          <div class="timer-track" aria-hidden="true"><div id="timer-progress"></div></div>
+          <div class="game-controls"><label class="switch-label"><input id="auto-drop" type="checkbox" disabled /><span class="switch"></span>自然落下<span id="auto-label">OFF</span></label><button id="pause" class="quiet" disabled>一時停止</button><button id="restart" class="quiet" disabled>新しいゲーム</button></div>
+          <p id="message" class="message" role="status" aria-live="polite">読み込み後、好きな列を選んでください。</p>
+        </section>
+        <aside class="side">
+          <section class="session-card"><div class="section-heading"><span class="label">THIS GAME</span><span id="session-type" class="badge">通常プレイ</span></div><dl><div><dt>合成した最大値</dt><dd id="max-tile">—</dd></div><div><dt>手数</dt><dd id="moves">0</dd></div><div><dt>生成される数字</dt><dd id="candidates">—</dd></div></dl></section>
+          <section class="history-card"><div class="section-heading"><span class="label">RECENT MERGES</span><span class="small-note">直近の合体</span></div><ol id="merge-history"><li class="empty-history">最初の合体をつくろう。</li></ol></section>
+          <section class="tools-card"><h2>続きも、同じ一手も。</h2><p>プレイはこのブラウザーに自動保存されます。記録を残して、同じ操作を再生できます。</p><div class="tool-buttons"><button id="export" disabled>記録を書き出す <span>↗</span></button><button id="import" disabled>記録を読み込む <span>↙</span></button></div><input id="file" type="file" accept=".json,application/json" hidden /><button id="replay" class="quiet replay-button" disabled>読み込んだ記録を再生</button></section>
+        </aside>
+      </div>
+      <details class="diagnostics" id="diagnostics"><summary><span>比較・診断ツール</span><span class="small-note">任意盤面 / 固定生成列 / ルール設定</span></summary><div class="diagnostic-content"><div><h2>同じ盤面から、確かめる。</h2><p>JSONの盤面は上から下へ6行、左から右へ5列。空マスは0。生成列は次の予告に使う値から指定します。</p><label class="field-label" for="preset">比較用の盤面</label><select id="preset"><option value="empty">空盤面</option><option value="official-chain">録画の4個合体（第2列へ4）</option><option value="triple">3個合体（第2列へ16）</option><option value="ceiling-rescue">最上段の救済（第2列へ16）</option><option value="ceiling-end">最上段で終了（第2列へ8）</option></select><button id="load-preset" disabled>例を入力欄へ反映</button><div class="seed-row"><label for="seed">新規ゲームのseed</label><input id="seed" type="number" min="0" max="4294967295" step="1" placeholder="ランダム" /></div><button id="apply-diagnostic" class="primary" disabled>この状態で診断を開始</button><p class="small-note">診断中の得点はベスト記録に含めません。</p></div><textarea id="diagnostic-json" rows="15" spellcheck="false" aria-label="診断用の初期状態JSON"></textarea><div class="rules-note"><h3>prototype-v1 / 暫定設定</h3><ul><li>5列×6段。合体・重力・連鎖の後に終了判定。</li><li>直接隣接する下・左右を同時合体。起点は投入したブロックとその合体結果のみ。</li><li>初期候補2・4、下限2、均等分布。履歴最大値の半分まで、最大128。</li><li>先に表示した予告は維持。新しい上限は次の予告生成から適用。</li><li>進行による最小ブロック消去は未確認のため無効。</li><li>自然落下は3.5秒ごとに選択列へ投入する暫定仕様。公式の速度・入力処理は未検証。</li></ul><p id="runtime-info" class="small-note">ランタイムを準備中</p><p class="small-note">保存・記録形式: session-v1。AI学習は次の段階で実装します。</p></div></div></details>
+      <footer><span>DROP NUMBER <span class="footer-dot">·</span> A PUZZLE EXPERIMENT</span><a href="./licenses/README.md">Runtime notices</a><span>小さな数字から、大きな連鎖へ。</span></footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

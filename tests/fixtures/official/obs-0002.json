@@ -1,0 +1,16 @@
+{
+  "id": "OBS-0002-four-tile-chain",
+  "origin": "video-observation",
+  "evidence": "docs/observations/OBS-0002-four-tile-chain.md",
+  "limits": "The initial board at t38-39 was read from the recording. Runtime metadata and future random draws are prototype settings, not observations.",
+  "initial": {
+    "board": [["0","0","0","0","0"],["0","0","0","0","0"],["0","0","0","0","0"],["64","4","0","0","0"],["16","8","16","0","0"],["32","16","8","2","8"]],
+    "current": "4", "next": "2", "score": "156", "merged_max": "64", "seed": 1
+  },
+  "column": 1,
+  "expected": {
+    "board": [["0","0","0","0","0"],["0","0","0","0","0"],["0","0","0","0","0"],["0","0","0","0","0"],["64","0","0","0","0"],["32","128","8","2","8"]],
+    "score": "308", "merged_max": "128", "over": false, "score_delta": "152",
+    "merge_results": ["8", "16", "128"]
+  }
+}

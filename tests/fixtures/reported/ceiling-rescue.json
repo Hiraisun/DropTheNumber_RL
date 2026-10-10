@@ -1,0 +1,14 @@
+{
+  "id": "USER-0001-ceiling-rescue",
+  "origin": "user-report-with-synthetic-layout",
+  "evidence": "docs/observations/USER-0001-rule-clarifications.md",
+  "initial": {
+    "board": [["0","0","0","0","0"],["0","16","0","0","0"],["0","32","0","0","0"],["0","8","0","0","0"],["0","4","0","0","0"],["0","2","0","0","0"]],
+    "current": "16", "next": "2", "score": "0", "merged_max": "32", "seed": 1
+  },
+  "column": 1,
+  "expected": {
+    "board": [["0","0","0","0","0"],["0","0","0","0","0"],["0","64","0","0","0"],["0","8","0","0","0"],["0","4","0","0","0"],["0","2","0","0","0"]],
+    "score": "96", "over": false, "merge_results": ["32", "64"]
+  }
+}

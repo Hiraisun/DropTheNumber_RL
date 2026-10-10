@@ -11,6 +11,13 @@ dist/
 .coverage
 htmlcov/
 
+# Web tools / generated browser runtime
+node_modules/
+web/public/runtime/
+web/public/engine/
+playwright-report/
+test-results/
+
 # Local configuration
 .env
 .env.*
@@ -21,6 +28,7 @@ artifacts/
 
 # Keep written observations and fixtures tracked; raw recordings stay local.
 evidence/raw/
+evidence/derived/
 
 # OS files
 Thumbs.db

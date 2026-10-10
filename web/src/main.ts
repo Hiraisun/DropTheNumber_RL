@@ -57,6 +57,7 @@ function apply(result: Result) {
   el('max-tile').title = state.merged_max;
   el('moves').textContent = String(state.moves);
   el('candidates').textContent = state.candidates.join(' · ');
+  el('rules-title').textContent = `${state.rules.id} / 暫定設定`;
   el('over-score').textContent = `SCORE ${formatted(state.score)}`;
   el('board-description').textContent = `得点${state.score}。現在${state.current}、次${state.next}。盤面は上から下へ: ${state.board.map(row => row.join('、')).join(' / ')}`;
   controls();
@@ -161,6 +162,7 @@ function columns(stacks: number[][]): Board {
 function preset(name: string) {
   const base = { board: columns([[], [], [], [], []]), current: '4', next: '2', score: '0', merged_max: '0', seed: 1, sequence: null };
   if (name === 'official-chain') return { ...base, board: columns([[32, 16, 64], [16, 8, 4], [8, 16], [2], [8]]), current: '4', score: '156', merged_max: '64' };
+  if (name === 'fallen-chain') return { ...base, board: columns([[2, 8], [16, 16, 8], [2], [], []]), current: '16', merged_max: '32' };
   if (name === 'triple') return { ...base, board: columns([[4, 16], [16], [], [], []]), current: '16', merged_max: '16' };
   if (name === 'ceiling-rescue' || name === 'ceiling-end') return { ...base, board: columns([[], [2, 4, 8, 32, 16], [], [], []]), current: name === 'ceiling-rescue' ? '16' : '8', merged_max: '32' };
   return base;

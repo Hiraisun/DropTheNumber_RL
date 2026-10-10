@@ -59,7 +59,6 @@ export class Renderer {
       }
     }
     ctx.strokeStyle = '#d18a6170'; ctx.setLineDash([4, 5]); ctx.beginPath(); ctx.moveTo(20, TOP - 5); ctx.lineTo(423, TOP - 5); ctx.stroke(); ctx.setLineDash([]);
-    ctx.font = '9px Arial, sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#b49376'; ctx.fillText('最上段は合体で救済', 422, TOP - 13);
     const moving = new Set<string>();
     if (this.event?.kind === 'drop' && this.event.to) moving.add(this.event.to.join(','));
     if (this.event?.kind === 'gravity') for (const m of this.event.movements!) moving.add(m.to.join(','));

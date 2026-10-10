@@ -20,7 +20,7 @@ def tile(value):
 
 @dataclass(frozen=True)
 class Rules:
-    id: str = "prototype-v1"
+    id: str = "prototype-v2"
     columns: int = 5
     rows: int = 6  # Row 0 is the terminal line, checked after resolving merges.
     initial_spawn_max: int = 4
@@ -29,8 +29,8 @@ class Rules:
     cleanup: str = "none-unverified"
 
     def __post_init__(self):
-        if self.id != "prototype-v1" or self.columns != 5 or self.rows != 6:
-            raise ValueError("この版はprototype-v1の5列×6段だけに対応しています。")
+        if self.id != "prototype-v2" or self.columns != 5 or self.rows != 6:
+            raise ValueError("この版はprototype-v2の5列×6段だけに対応しています。")
         for value in (self.initial_spawn_max, self.spawn_min, self.spawn_cap):
             tile(value)
         if not self.spawn_min <= self.initial_spawn_max <= self.spawn_cap:
@@ -184,12 +184,14 @@ class Game:
         self.board[row][column] = self.current
         events.append({"kind": "drop", "value": str(self.current), "from": [-1, column],
                        "to": [row, column], "board": self._wire_board(), "score": str(self.score)})
-        while True:
+        pending = [(row, column)]
+        while pending:
+            row, column = pending.pop(0)
             value = self.board[row][column]
             targets = [(r, c) for r, c in ((row + 1, column), (row, column - 1), (row, column + 1))
                        if 0 <= r < self.rules.rows and 0 <= c < self.rules.columns and self.board[r][c] == value]
             if not targets:
-                break
+                continue
             result = value << len(targets)
             for r, c in targets:
                 self.board[r][c] = 0
@@ -201,7 +203,7 @@ class Game:
                            "sources": [list(p) for p in targets],
                            "board": self._wire_board(), "score": str(self.score)})
             movements = []
-            active_row = row
+            positions = {}
             for col in range(self.rules.columns):
                 occupied = [(r, self.board[r][col]) for r in range(self.rules.rows) if self.board[r][col]]
                 self.board_col_clear(col)
@@ -209,11 +211,17 @@ class Game:
                 for offset, (old_row, n) in enumerate(occupied):
                     new_row = first + offset
                     self.board[new_row][col] = n
-                    if col == column and old_row == row:
-                        active_row = new_row
+                    positions[old_row, col] = (new_row, col)
                     if new_row != old_row:
                         movements.append({"value": str(n), "from": [old_row, col], "to": [new_row, col]})
-            row = active_row
+            # Remove consumed origins and remap surviving origins after gravity.
+            # Continue the merge result first, then existing work, then fallen
+            # tiles bottom-to-top and left-to-right. Never scan unrelated tiles.
+            origins = [positions[row, column]]
+            origins.extend(positions[p] for p in pending if p not in targets)
+            origins.extend(tuple(m["to"]) for m in sorted(
+                movements, key=lambda m: (-m["to"][0], m["to"][1])))
+            pending = list(dict.fromkeys(origins))
             if movements:
                 events.append({"kind": "gravity", "movements": movements,
                                "board": self._wire_board(), "score": str(self.score)})

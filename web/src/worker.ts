@@ -13,7 +13,7 @@ async function initialize(base: string) {
   const { loadPyodide } = await import(/* @vite-ignore */ `${runtime}pyodide.mjs`);
   python = await loadPyodide({ indexURL: runtime });
   scope.postMessage({ progress: '共通ゲームエンジンを準備しています…' });
-  const response = await fetch(new URL('engine/source.json', base));
+  const response = await fetch(new URL('engine/source.json', base), { cache: 'no-cache' });
   if (!response.ok) throw new Error(`エンジンの取得に失敗しました (${response.status})`);
   const files: Record<string, string> = await response.json();
   for (const [relative, source] of Object.entries(files)) {

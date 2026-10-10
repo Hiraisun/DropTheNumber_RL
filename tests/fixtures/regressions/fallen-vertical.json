@@ -1,0 +1,109 @@
+{
+  "id": "fallen-vertical",
+  "origin": "synthetic-regression",
+  "evidence": "docs/observations/USER-0002-fallen-merges.md",
+  "limits": "Synthetic layout for the user-reported missing fallen-tile merge. Resolution order remains provisional.",
+  "initial": {
+    "board": [
+      [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      [
+        "8",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      [
+        "16",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      [
+        "8",
+        "2",
+        "0",
+        "0",
+        "0"
+      ]
+    ],
+    "current": "16",
+    "next": "2",
+    "merged_max": "32",
+    "seed": 1
+  },
+  "column": 1,
+  "expected": {
+    "board": [
+      [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      [
+        "0",
+        "32",
+        "0",
+        "0",
+        "0"
+      ],
+      [
+        "16",
+        "2",
+        "0",
+        "0",
+        "0"
+      ]
+    ],
+    "score_delta": "48",
+    "merge_results": [
+      "32",
+      "16"
+    ],
+    "over": false
+  }
+}

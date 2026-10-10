@@ -101,6 +101,10 @@ def test_import_rejects_holes_and_inconsistent_terminal_state():
     data["over"] = True
     with pytest.raises(ValueError, match="終了状態"):
         Game.from_snapshot(data)
+    data = Game(1).snapshot()
+    data["rules"]["id"] = "prototype-v1"
+    with pytest.raises(ValueError, match="prototype-v2"):
+        Game.from_snapshot(data)
 
 
 def test_preview_is_retained_when_generation_range_changes():
@@ -113,3 +117,11 @@ def test_preview_is_retained_when_generation_range_changes():
     assert result["state"]["merged_max"] == "256"
     assert result["state"]["current"] == "4"
     assert result["state"]["candidates"][-1] == "128"
+
+
+def test_untouched_adjacent_tiles_do_not_merge_on_unrelated_drop():
+    data = Game(1).snapshot()
+    data["board"][-1] = ["8", "8", "0", "0", "0"]
+    result = Game.from_snapshot(data).step(4)
+    assert result["score_delta"] == "0"
+    assert result["state"]["board"][-1][:2] == ["8", "8"]

@@ -6,7 +6,7 @@
 <nav aria-label="管理画面"><button data-page="experiments" aria-selected="true">学習</button><button data-page="evaluation">検証</button><button data-page="models">モデル</button></nav>
 <div id="experiments" class="page"><div class="columns"><section><h1>学習設定</h1><form id="training-form">
 <label>実験名<input id="name" value="PPO学習" maxlength="100" required></label>
-<label>プリセット<select id="preset"><option value="quick">動作確認（131,072手）</option><option value="normal">通常学習（1,048,576手）</option><option value="repeat">繰り返し比較（3 seed）</option></select></label>
+<label>プリセット<select id="preset"></select></label>
 <label>親モデル<select id="parent"><option value="">新規学習</option></select></label><p id="parent-hint" class="muted" hidden>親の設定・最適化状態を引き継ぎ、新しいゲームから追加学習します。</p>
 <div class="fields"><label>学習手数（全環境合計）<input id="timesteps" type="number" min="1" max="100000000" required></label><label>学習seed<input id="seed" type="number" min="0" max="4294967295" required></label></div>
 <label class="check"><input id="auto-evaluate" type="checkbox" checked>完了後に比較検証（64ゲーム）</label>

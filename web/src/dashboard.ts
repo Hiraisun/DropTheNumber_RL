@@ -1,6 +1,18 @@
 import './dashboard.css';
 
 type Config = Record<string, string | number | number[]>;
+type Preset = { label: string; config: Config; repeats?: number };
+const presets: Record<string, Preset> = {
+  quick: { label: '動作確認（約13万手）', config: { timesteps: 131072 } },
+  normal: { label: '通常学習（約105万手）', config: { timesteps: 1048576 } },
+  repeat: { label: '通常学習・3seed（約105万手／回）', config: { timesteps: 1048576 }, repeats: 3 },
+  long: { label: '長時間学習（約419万手）', config: { timesteps: 4194304 } },
+  'long-repeat': { label: '長時間学習・3seed（約419万手／回）', config: { timesteps: 4194304 }, repeats: 3 },
+  'low-rate': { label: '学習率0.0001（約105万手）', config: { timesteps: 1048576, learning_rate: 0.0001 } },
+  'wide-network': { label: '隠れ層128,128（約105万手）', config: { timesteps: 1048576, hidden: [128, 128] } },
+  'long-horizon': { label: '割引率0.999（約105万手）', config: { timesteps: 1048576, gamma: 0.999 } },
+  'score-reward': { label: '得点比例報酬（約105万手）', config: { timesteps: 1048576, reward: 'score' } },
+};
 type Job = { id: string; kind: string; name: string; status: string; config?: Config; note: string; created: number; order: number; error?: string; parent?: string; best?: string; latest?: string; best_score?: number; condition?: Condition; baselines?: { agents: Record<string, { mean_score: number }> }; progress: Record<string, number | string>; history: History[] };
 type History = { timesteps: number; seconds: number; validation_mean_score: number | null; validation_complete?: boolean };
 type Model = { id: string; job: string | null; name: string; timesteps: number; zip: string | null; sha256: string; parent: string | null; seed_history_known: boolean };
@@ -64,13 +76,27 @@ function page(id: string) {
 }
 document.querySelectorAll<HTMLElement>('[data-page]').forEach(el => el.onclick = () => page(el.dataset.page!));
 $('dismiss').onclick = () => { $('error').hidden = true; };
-select('preset').onchange = () => { select('parent').value = ''; parentChanged(); fill({ ...defaults, timesteps: select('preset').value === 'normal' ? 1048576 : 131072, seed: crypto.getRandomValues(new Uint32Array(1))[0] }); };
+select('preset').innerHTML = Object.entries(presets).map(([id, preset]) => `<option value="${id}">${preset.label}</option>`).join('');
+function trainingRepeats() { return select('parent').value ? 1 : presets[select('preset').value].repeats || 1; }
+function updateTrainingButton() {
+  const count = trainingRepeats();
+  $('training-form').querySelector<HTMLButtonElement>('button[type=submit]')!.textContent = count === 1 ? '学習を登録' : `学習を登録（${count}件）`;
+  input('seed').max = String(2 ** 32 - count);
+}
+select('preset').onchange = () => {
+  select('parent').value = ''; void parentChanged();
+  const preset = presets[select('preset').value];
+  const seed = crypto.getRandomValues(new Uint32Array(1))[0] % (2 ** 32 - (preset.repeats || 1) + 1);
+  fill({ ...defaults, ...preset.config, seed });
+  updateTrainingButton();
+};
 async function parentChanged() {
   const sequence = ++parentSequence;
   const model = state.models.find(m => m.id === select('parent').value);
   $('parent-hint').hidden = !model;
   document.querySelectorAll<HTMLInputElement | HTMLSelectElement>('#advanced input,#advanced select').forEach(el => el.disabled = !!model);
   select('preset').disabled = !!model;
+  updateTrainingButton();
   if (model) {
     const submit = $('training-form').querySelector<HTMLButtonElement>('button[type=submit]')!; submit.disabled = true;
     try { const result = await api('view?model=' + encodeURIComponent(model.id)); if (sequence !== parentSequence) return; fill({ ...result.policy.metadata.config, timesteps: 131072, seed: crypto.getRandomValues(new Uint32Array(1))[0] }); input('name').value = model.name + ' / 追加学習'; }
@@ -82,7 +108,7 @@ async function parentChanged() {
 }
 select('parent').onchange = () => { void parentChanged(); };
 $('training-form').onsubmit = async e => {
-  e.preventDefault(); const result = await action('train', { config: configuration(), name: input('name').value, parent: select('parent').value || null, auto_evaluate: input('auto-evaluate').checked, repeats: !select('parent').value && select('preset').value === 'repeat' ? 3 : 1 }, true);
+  e.preventDefault(); const result = await action('train', { config: configuration(), name: input('name').value, parent: select('parent').value || null, auto_evaluate: input('auto-evaluate').checked, repeats: trainingRepeats() }, true);
   if (result) { $('training-result').textContent = '登録しました'; detailId = result.ids[0]; await updateDetail(); }
 };
 $('evaluation-form').onsubmit = async e => { e.preventDefault(); const result = await action('evaluate', { models: [...selectedModels], condition: select('condition').value }, true); if (result) { evaluationId = result.id; await updateDetail(); } };

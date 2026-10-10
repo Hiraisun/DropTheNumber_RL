@@ -15,7 +15,7 @@ const presets: Record<string, Preset> = {
 };
 type Job = { id: string; kind: string; name: string; status: string; config?: Config; note: string; created: number; order: number; error?: string; parent?: string; best?: string; latest?: string; best_score?: number; condition?: Condition; baselines?: { agents: Record<string, { mean_score: number }> }; progress: Record<string, number | string>; history: History[] };
 type History = { timesteps: number; seconds: number; validation_mean_score: number | null; validation_complete?: boolean };
-type Model = { id: string; job: string | null; name: string; timesteps: number; zip: string | null; sha256: string; parent: string | null; seed_history_known: boolean };
+type Model = { id: string; job: string | null; name: string; timesteps: number; created: number; zip: string | null; sha256: string; parent: string | null; seed_history_known: boolean };
 type Condition = { id: string; name: string; purpose: string; seeds: number[]; max_steps: number };
 type State = { environment: Record<string, boolean>; jobs: Job[]; models: Model[]; conditions: Condition[]; importable: string[] };
 type Episode = { seed: number; score: string; moves: number; merged_max: string; terminated: boolean; truncated: boolean; inference_ms_per_move: number };
@@ -31,6 +31,7 @@ const token = document.querySelector<HTMLMetaElement>('meta[name=dtn-token]')!.c
 let state: State = { environment: {}, jobs: [], models: [], conditions: [], importable: [] }, defaults: Config;
 let detailId = '', evaluationId = '', lastInventory = '', editId = '', detailPending = false, pollPending = false, jobsSignature = '';
 let selectedJobs = new Set<string>(), selectedModels = new Set<string>(['random', 'greedy']);
+const openModelGroups = new Set<string>();
 const pending = new Map<string, string>();
 let requestBusy = false;
 let rebuildId = '';
@@ -147,6 +148,8 @@ $('import-run').onclick = () => { if (select('import-existing').value) void acti
 $('import-actor').onclick = () => input('actor-file').click();
 input('actor-file').onchange = async () => { const file = input('actor-file').files?.[0]; if (!file) return; try { if (file.size > 2 * 1024 * 1024) throw Error('モデルは2MB以下にしてください。'); await action('import-policy', { policy: JSON.parse(await file.text()) }); } catch (e) { showError(e); } finally { input('actor-file').value = ''; } };
 input('search').oninput = renderJobs;
+input('model-search').oninput = renderModels;
+$('collapse-models').onclick = () => { openModelGroups.clear(); renderModels(); };
 select('axis').onchange = renderChart; select('smooth').onchange = renderChart;
 function conditionInfo() { const c = state.conditions.find(c => c.id === select('condition').value); $('condition-info').textContent = c ? `${c.purpose} / ${c.seeds.length}ゲーム / seed ${c.seeds[0]}～${c.seeds.at(-1)} / 上限${c.max_steps}手 / prototype-v2 / 決定的推論` : ''; }
 select('condition').onchange = conditionInfo;
@@ -215,7 +218,33 @@ function renderChart() {
   $('config-comparison').innerHTML = '<div class="table-wrap"><table><thead><tr><th>条件</th>' + jobs.map(j => `<th>${escape(j.name)}</th>`).join('') + '</tr></thead><tbody>' + keys.map(key => `<tr><th>${key}</th>${jobs.map(j => `<td>${escape(j.config?.[key])}</td>`).join('')}</tr>`).join('') + '</tbody></table></div>';
 }
 function renderModels() {
-  $('model-list').innerHTML = state.models.length ? '<div class="table-wrap"><table><thead><tr><th>モデル</th><th>学習手数・由来</th><th>採用</th><th>操作</th></tr></thead><tbody>' + [...state.models].reverse().map(m => { const job = state.jobs.find(j => j.id === m.job); return `<tr><td>${escape(m.name)}<div class="muted" title="${m.sha256}">SHA256 ${m.sha256.slice(0, 12)}</div></td><td>${number(m.timesteps)}手<div class="muted">${m.parent ? '親 ' + escape(m.parent) : '新規／取込'}${m.seed_history_known ? '' : '<br>seed履歴は不明'}</div></td><td>${job?.best === m.id ? '最高検証得点' : ''}${job?.latest === m.id ? '<br>最新' : ''}</td><td><div class="row"><button data-watch="${m.id}">観戦</button>${m.zip ? `<button data-continue="${m.id}">追加学習</button>` : ''}<a href="/api/export/model/${m.id}">JSON</a><button data-eval-model="${m.id}">検証対象に追加</button></div></td></tr>`; }).join('') + '</tbody></table></div>' : '<p class="muted">保存モデルはまだありません。</p>';
+  const groups = new Map<string, { id: string; job?: Job; models: Model[] }>();
+  for (const model of state.models) {
+    const id = model.job || 'imported-policies';
+    if (!groups.has(id)) groups.set(id, { id, job: state.jobs.find(job => job.id === model.job), models: [] });
+    groups.get(id)!.models.push(model);
+  }
+  const query = input('model-search').value.trim().toLowerCase();
+  const actions = (m: Model) => `<div class="row"><button data-watch="${m.id}">観戦</button>${m.zip ? `<button data-continue="${m.id}">追加学習</button>` : ''}<a href="/api/export/model/${m.id}">JSON</a><button data-eval-model="${m.id}">検証対象に追加</button></div>`;
+  const title = (m: Model) => m.job && m.id.startsWith(m.job + '-step-') ? `${number(m.timesteps)}手` : escape(m.name);
+  const labels = (m: Model, job?: Job) => [job?.latest === m.id ? '最新' : '', job?.best === m.id ? '最高検証得点' : ''].filter(Boolean).join(' / ');
+  const visible = [...groups.values()].sort((a, b) => (b.job?.created ?? Math.max(...b.models.map(m => m.created))) - (a.job?.created ?? Math.max(...a.models.map(m => m.created))))
+    .filter(group => (group.job ? experimentLabel(group.job) : '取り込みモデル').toLowerCase().includes(query));
+  $('model-list').innerHTML = visible.length ? visible.map(group => {
+    const { id, job } = group, name = job ? experimentLabel(job) : '取り込みモデル';
+    const models = [...group.models].sort((a, b) => b.timesteps - a.timesteps || b.created - a.created);
+    const latest = models.find(m => m.id === job?.latest) || models[0], best = models.find(m => m.id === job?.best);
+    const featured = job ? [latest, ...(best && best.id !== latest.id ? [best] : [])] : [];
+    return `<article class="model-group"><div class="model-group-heading"><h2>${escape(name)}</h2><span class="muted">${models.length}モデル${job ? ' · ' + new Date(job.created * 1000).toLocaleString('ja-JP') + ' · ' + statusLabel(job) : ''}</span></div>`
+      + featured.map(m => `<div class="model-featured"><div><span class="model-tag">${labels(m, job) || '最新保存'}</span><strong>${title(m)}</strong></div>${actions(m)}</div>`).join('')
+      + `<details data-model-group="${id}" ${openModelGroups.has(id) ? 'open' : ''}><summary>全${models.length}件のモデル</summary><div class="table-wrap model-checkpoints"><table><thead><tr><th>モデル／累計手数</th><th>採用</th><th>操作</th></tr></thead><tbody>`
+      + models.map(m => `<tr><td>${title(m)}<div class="muted" title="${m.sha256}">SHA256 ${m.sha256.slice(0, 12)}${m.seed_history_known ? '' : '<br>seed履歴は不明'}</div></td><td>${labels(m, job)}</td><td>${actions(m)}</td></tr>`).join('')
+      + '</tbody></table></div></details></article>';
+  }).join('') : `<p class="muted">${state.models.length ? '該当する実験はありません。' : '保存モデルはまだありません。'}</p>`;
+  $('model-list').querySelectorAll<HTMLDetailsElement>('[data-model-group]').forEach(el => el.ontoggle = () => {
+    if (!el.isConnected) return;
+    if (el.open) openModelGroups.add(el.dataset.modelGroup!); else openModelGroups.delete(el.dataset.modelGroup!);
+  });
   wireJobs($('model-list'));
   $('model-list').querySelectorAll<HTMLElement>('[data-watch]').forEach(el => el.onclick = () => { const seed = Number(input('watch-seed').value); if (!Number.isInteger(seed) || seed < 0 || seed > 4294967295) { showError('観戦seedが不正です。'); return; } window.open(`/index.html?model=${el.dataset.watch}&seed=${seed}`, 'game'); });
   $('model-list').querySelectorAll<HTMLElement>('[data-eval-model]').forEach(el => el.onclick = () => { selectedModels.add(el.dataset.evalModel!); lastInventory = ''; inventory(); page('evaluation'); });

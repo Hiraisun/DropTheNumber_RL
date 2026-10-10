@@ -12,7 +12,6 @@ let busy = true, ready = false, paused = false, diagnostic = false, replaying = 
 let selected = 2, turnStart = performance.now(), pauseProgress = 0, replayRun = 0;
 let imported: Session | undefined;
 let best = '0';
-let history: MoveEvent[] = [];
 let latency: number[] = [];
 let runtimeLabel = '';
 try { const stored = localStorage.getItem(BEST); if (stored && /^\d+$/.test(stored)) best = stored; } catch { /* Playing still works without storage. */ }
@@ -69,21 +68,9 @@ async function persist() {
   catch { showError('自動保存できませんでした。記録の書き出しで保存できます。'); }
 }
 
-function showHistory() {
-  const list = el('merge-history'); list.replaceChildren();
-  if (!history.length) { const empty = document.createElement('li'); empty.className = 'empty-history'; empty.textContent = '最初の合体をつくろう。'; list.append(empty); }
-  for (const event of history.slice(-5).reverse()) {
-    const row = document.createElement('li'), description = document.createElement('span'), value = document.createElement('strong');
-    description.textContent = `${compact(event.value!)} × ${event.count} →`;
-    value.textContent = compact(event.result!); value.title = event.result!;
-    row.append(description, value); list.append(row);
-  }
-}
-
 function animate(event: MoveEvent, duration: number) {
   renderer.board = event.board; renderer.showIncoming = false; renderer.event = event;
   el('score').textContent = formatted(event.score);
-  if (event.kind === 'merge') { history.push(event); showHistory(); }
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || document.hidden) duration = 0;
   const start = performance.now();
   return new Promise<void>(resolve => {
@@ -130,7 +117,7 @@ async function newGame() {
   const seed = input === '' ? crypto.getRandomValues(new Uint32Array(1))[0] : Number(input);
   try {
     const result = await client.request<Result>({ command: 'new', seed, auto_drop: autoInput.checked });
-    history = []; showHistory(); apply(result); imported = undefined; el('gain').textContent = '';
+    apply(result); imported = undefined; el('gain').textContent = '';
     await persist();
   } catch (error) { showError(errorMessage(error)); }
   finally { busy = false; resetTimer(); controls(); }
@@ -218,7 +205,7 @@ el('apply-diagnostic').addEventListener('click', async () => {
   busy = true; clearError(); controls();
   try {
     const result = await client.request<Result>({ command: 'diagnostic', state: JSON.parse(el<HTMLTextAreaElement>('diagnostic-json').value) });
-    autoInput.checked = false; paused = false; imported = undefined; history = []; showHistory(); apply(result); el('gain').textContent = '';
+    autoInput.checked = false; paused = false; imported = undefined; apply(result); el('gain').textContent = '';
   } catch (error) { showError(errorMessage(error)); }
   finally { busy = false; resetTimer(); controls(); }
 });
@@ -242,7 +229,7 @@ el<HTMLInputElement>('file').addEventListener('change', async event => {
     const session: Session = JSON.parse(await file.text());
     const result = await client.request<Result>({ command: 'import', session });
     imported = session; autoInput.checked = result.settings!.auto_drop; paused = true;
-    history = []; showHistory(); apply(result); el('gain').textContent = ''; await persist();
+    apply(result); el('gain').textContent = ''; await persist();
   } catch (error) { showError(errorMessage(error)); }
   finally { input.value = ''; busy = false; resetTimer(); controls(); }
 });
@@ -253,7 +240,7 @@ el('replay').addEventListener('click', async () => {
   try {
     const initial = { ...original, actions: [], final: original.initial, settings: { ...original.settings, auto_drop: false } };
     const result = await client.request<Result>({ command: 'import', session: initial });
-    autoInput.checked = false; paused = false; history = []; showHistory(); apply(result); replaying = true; busy = false; controls();
+    autoInput.checked = false; paused = false; apply(result); replaying = true; busy = false; controls();
     for (const action of original.actions) {
       if (run !== replayRun) break;
       if (!await drop(action.column, 'replay')) throw new Error('記録の再生を継続できませんでした。');

@@ -111,14 +111,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
 .layout {
   display:grid;
-  grid-template-columns:1fr 410px 240px;
+  --game-width:410px;
+  grid-template-columns:minmax(0,1fr) var(--game-width) minmax(0,1fr);
   gap:36px;
   padding:43px 0 38px;
   align-items:start
-}
-
-.intro {
-  padding-top:17px
 }
 
 .eyebrow {
@@ -130,75 +127,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   gap:8px
 }
 
-.tiny-square {
-  width:7px;
-  height:7px;
-  background:var(--accent)
-}
-
-h1 {
-  font-family:'Space Grotesk',sans-serif;
-  font-size:clamp(40px,4.7vw,62px);
-  line-height:.98;
-  letter-spacing:-3.5px;
-  margin:27px 0 25px
-}
-
-h1 span {
-  color:var(--accent)
-}
-
-.lede {
-  font-size:14px;
-  line-height:1.95;
-  color:#646d61;
-  margin:0
-}
-
-.merge-example {
-  display:flex;
-  align-items:center;
-  gap:5px;
-  margin-top:38px;
-  max-width:240px
-}
-
-.merge-example span,.merge-example strong {
-  display:grid;
-  place-items:center;
-  width:42px;
-  height:44px;
-  border-radius:7px;
-  background:#bfd4cc;
-  color:#2b5b4d;
-  font-family:'Space Grotesk',sans-serif;
-  font-weight:700;
-  font-size:20px;
-  box-shadow:inset 0 -3px #00000009
-}
-
-.merge-example strong {
-  background:#d4bdec;
-  color:#5c3983
-}
-
-.merge-example i {
-  font-style:normal;
-  font-size:20px;
-  color:#80907e;
-  padding:0 5px
-}
-
-.example-note {
-  font-size:11px;
-  color:#7c8376;
-  margin-top:10px
-}
-
 .instructions {
-  border-top:1px solid var(--border);
-  margin-top:35px;
-  padding-top:22px
+  width:100%;
+  max-width:240px;
+  padding-top:7px;
+  justify-self:end
 }
 
 .instructions h2,.label {
@@ -208,15 +141,27 @@ h1 span {
   letter-spacing:1.8px
 }
 
-.instructions p {
-  font-size:12px;
-  line-height:1.95;
-  color:#687264
+.instructions h2 {
+  margin:0 0 18px
 }
 
 .keyboard-hint {
-  line-height:2.4!important;
-  padding-top:7px
+  margin:0;
+  font-size:12px;
+  color:#687264
+}
+
+.keyboard-hint>div {
+  margin:0 0 16px
+}
+
+.keyboard-hint dt {
+  margin-bottom:6px
+}
+
+.keyboard-hint dd {
+  margin:0;
+  line-height:1.7
 }
 
 kbd {
@@ -233,14 +178,8 @@ kbd {
   background:#fdfcf6
 }
 
-.prototype-note {
-  font-size:10px;
-  line-height:1.9;
-  color:#899081;
-  margin-top:34px
-}
-
 .game {
+  width:100%;
   min-width:0;
   position:relative
 }
@@ -527,6 +466,9 @@ canvas {
 }
 
 .side {
+  width:100%;
+  max-width:240px;
+  min-width:0;
   padding-top:7px
 }
 
@@ -599,35 +541,6 @@ canvas {
   font-size:10px;
   color:#849079;
   line-height:1.8
-}
-
-.history-card ol {
-  list-style:none;
-  padding:0;
-  margin:12px 0 0;
-  min-height:100px
-}
-
-.history-card li {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  font-family:'Space Grotesk',sans-serif;
-  font-size:13px;
-  padding:8px 0;
-  color:#64745b
-}
-
-.history-card li strong {
-  font-size:16px;
-  color:#354c2e
-}
-
-.history-card .empty-history {
-  font-family:inherit;
-  font-size:11px;
-  padding-top:18px;
-  color:#8c957f
 }
 
 .tools-card p {
@@ -794,42 +707,50 @@ footer {
   border:0
 }
 
-@media(min-width:1400px) {
+@media(max-width:1100px) {
+  .shell {
+    padding:0 24px
+  }
   .layout {
-    padding-top:55px;
-    gap:44px
+    --game-width:330px;
+    gap:24px
   }
 }
 
-@media(max-width:1100px) {
-  .shell {
-    padding:0 28px
+/* Preserve all three columns on landscape screens. */
+@media(min-width:701px) and (max-height:800px) {
+  .masthead {
+    height:56px
   }
   .layout {
-    grid-template-columns:1fr 390px;
-    gap:35px
+    --game-width:330px;
+    padding-top:16px;
+    gap:26px
   }
-  .side {
-    grid-column:1/-1;
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:30px
+  .scorebar {
+    height:50px
   }
-  .side section {
-    border-bottom:0;
-    padding-top:20px!important;
-    border-top:1px solid var(--border)
+  .nextbar {
+    height:32px
   }
-  h1 {
-    font-size:60px
+}
+
+@media(min-width:701px) and (max-width:950px) {
+  .shell {
+    padding:0 18px
   }
-  .intro {
-    max-width:270px;
-    justify-self:center
+  .layout {
+    --game-width:280px;
+    gap:18px
   }
-  .game {
-    width:390px;
-    justify-self:center
+  .instructions,.side {
+    font-size:11px
+  }
+  .section-heading {
+    flex-wrap:wrap
+  }
+  .game-controls {
+    flex-wrap:wrap
   }
 }
 
@@ -839,7 +760,7 @@ footer {
     padding:0 20px
   }
   .masthead {
-    height:65px;
+    height:52px;
     gap:12px
   }
   .wordmark {
@@ -857,44 +778,16 @@ footer {
   .layout {
     display:flex;
     flex-direction:column;
-    padding-top:20px;
-    gap:23px
-  }
-  .intro {
-    max-width:none;
-    width:100%;
-    padding:0;
-    display:flex;
-    align-items:center;
-    justify-content:space-between
-  }
-  .intro .eyebrow,.intro .merge-example,.intro .example-note,.intro .instructions,.intro .prototype-note {
-    display:none
-  }
-  h1 {
-    font-size:27px;
-    line-height:1;
-    letter-spacing:-1.5px;
-    margin:0
-  }
-  h1 br {
-    display:none
-  }
-  h1 span {
-    margin-left:6px
-  }
-  .lede {
-    font-size:10px;
-    line-height:1.8;
-    display:none
+    padding-top:16px;
+    gap:24px
   }
   .game {
-    width:100%;
+    order:1;
     max-width:410px;
     align-self:center
   }
   .scorebar {
-    height:65px
+    height:55px
   }
   .scorebar strong {
     font-size:31px
@@ -903,32 +796,29 @@ footer {
     font-size:22px
   }
   .nextbar {
-    height:38px
+    height:36px
   }
   .board-wrap {
     border-radius:12px
   }
-  .side {
-    width:100%;
+  .instructions {
+    order:2;
+    max-width:none;
+    padding-top:18px;
+    border-top:1px solid var(--border)
+  }
+  .keyboard-hint {
     display:grid;
     grid-template-columns:1fr 1fr;
-    gap:20px;
+    gap:14px
+  }
+  .keyboard-hint>div {
+    margin:0
+  }
+  .side {
+    order:3;
+    max-width:none;
     padding:0
-  }
-  .side section {
-    padding:17px 0!important
-  }
-  .side .tools-card {
-    grid-column:1/-1
-  }
-  .history-card ol {
-    min-height:0
-  }
-  .history-card li:nth-child(n+4) {
-    display:none
-  }
-  .tools-card p {
-    max-width:340px
   }
   .tool-buttons {
     grid-template-columns:1fr 1fr
@@ -962,66 +852,5 @@ footer {
   * {
     animation-duration:.01ms!important;
     transition-duration:.01ms!important
-  }
-}
-
-/* Keep the drop controls in view on short laptop screens. */
-@media(min-width:950px) and (max-height:800px) {
-  .masthead {
-    height:56px
-  }
-  .layout {
-    padding-top:16px;
-    grid-template-columns:1fr 330px 230px;
-    gap:26px
-  }
-  .game {
-    width:330px
-  }
-  .scorebar {
-    height:50px
-  }
-  .nextbar {
-    height:32px
-  }
-  .intro {
-    max-width:none;
-    justify-self:stretch
-  }
-  .side {
-    grid-column:auto;
-    display:block
-  }
-  .side section {
-    border-top:0;
-    padding-top:0!important
-  }
-  .side section+section {
-    padding-top:20px!important
-  }
-  .intro .instructions {
-    margin-top:25px
-  }
-  .intro .prototype-note {
-    margin-top:20px
-  }
-}
-
-@media(max-width:700px) {
-  .masthead {
-    height:52px
-  }
-  .layout {
-    padding-top:16px;
-    gap:14px
-  }
-  h1 {
-    font-size:23px
-  }
-  .scorebar {
-    height:55px
-  }
-  .nextbar {
-    height:36px
   }
 }

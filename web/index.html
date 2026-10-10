@@ -11,14 +11,14 @@
     <main class="shell">
       <header class="masthead"><a class="wordmark" href="./">DN<span class="mark-dot"></span></a><span class="masthead-caption">DROP NUMBER / PLAY LAB</span><span class="version">PROTOTYPE 01</span></header>
       <div class="layout">
-        <aside class="intro">
-          <p class="eyebrow"><span class="tiny-square"></span> 数字を、もっと大きく。</p>
-          <h1>DROP<br /><span>NUMBER.</span></h1>
-          <p class="lede">落とす。つなぐ。連鎖する。<br />ひとつの選択から、大きな数字へ。</p>
-          <div class="merge-example" aria-label="16を3個合体すると64"><span>16</span><span>16</span><span>16</span><i>→</i><strong>64</strong></div>
-          <p class="example-note">3個つながれば、2段階アップ。</p>
-          <div class="instructions"><h2>HOW TO PLAY</h2><p>列をタップしてブロックを落とします。<br />下・左右の同じ数字が合体します。</p><p class="keyboard-hint"><kbd>1</kbd>–<kbd>5</kbd> 列に落とす<br /><kbd>←</kbd> <kbd>→</kbd> 列を選ぶ / <kbd>Enter</kbd> 落とす</p></div>
-          <p class="prototype-note">ルール調査中の試作版です。<br />公式との完全な一致は未検証です。</p>
+        <aside class="instructions" aria-labelledby="how-to-play">
+          <h2 id="how-to-play">HOW TO PLAY</h2>
+          <dl class="keyboard-hint">
+            <div><dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>列に落とす</dd></div>
+            <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>列を選ぶ</dd></div>
+            <div><dt><kbd>Enter</kbd> / <kbd>Space</kbd></dt><dd>落とす</dd></div>
+            <div><dt><kbd>P</kbd></dt><dd>一時停止・再開</dd></div>
+          </dl>
         </aside>
         <section class="game" aria-label="ゲーム">
           <div class="scorebar"><div><span class="label">SCORE</span><strong id="score">0</strong><span id="gain" class="gain"></span></div><div class="best"><span class="label">BEST</span><strong id="best">0</strong></div></div>
@@ -35,7 +35,6 @@
         </section>
         <aside class="side">
           <section class="session-card"><div class="section-heading"><span class="label">THIS GAME</span><span id="session-type" class="badge">通常プレイ</span></div><dl><div><dt>合成した最大値</dt><dd id="max-tile">—</dd></div><div><dt>手数</dt><dd id="moves">0</dd></div><div><dt>生成される数字</dt><dd id="candidates">—</dd></div></dl></section>
-          <section class="history-card"><div class="section-heading"><span class="label">RECENT MERGES</span><span class="small-note">直近の合体</span></div><ol id="merge-history"><li class="empty-history">最初の合体をつくろう。</li></ol></section>
           <section class="tools-card"><p>プレイはこのブラウザーに自動保存されます。記録を残して、同じ操作を再生できます。</p><div class="tool-buttons"><button id="export" disabled>記録を書き出す <span>↗</span></button><button id="import" disabled>記録を読み込む <span>↙</span></button></div><input id="file" type="file" accept=".json,application/json" hidden /><button id="replay" class="quiet replay-button" disabled>読み込んだ記録を再生</button></section>
         </aside>
       </div>

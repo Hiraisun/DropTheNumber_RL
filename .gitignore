@@ -1,0 +1,27 @@
+# Python / development tools
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Generated game / training artifacts
+artifacts/
+
+# Keep written observations and fixtures tracked; raw recordings stay local.
+evidence/raw/
+
+# OS files
+Thumbs.db
+.DS_Store

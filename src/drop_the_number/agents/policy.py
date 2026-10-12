@@ -5,7 +5,7 @@ from math import fsum, isfinite, tanh
 
 from drop_the_number import __version__
 from drop_the_number.core import Rules
-from .observation import OBSERVATION_ID, OBSERVATION_SIZE, observation
+from .observation import OBSERVATION_SIZES, observation
 
 POLICY_SCHEMA = "drop-number/policy-v1"
 
@@ -14,13 +14,14 @@ class Policy:
     def __init__(self, data):
         if data.get("schema") != POLICY_SCHEMA or data.get("engine") != __version__:
             raise ValueError("対応していないAIモデル形式・エンジン版です。")
-        if data.get("observation") != OBSERVATION_ID:
+        if data.get("observation") not in OBSERVATION_SIZES:
             raise ValueError("AIの観測形式が一致しません。")
+        self.observation_id = data["observation"]
         self.rules = asdict(Rules(**data["rules"]))
         layers = data.get("layers")
         if not isinstance(layers, list) or not 1 <= len(layers) <= 4:
             raise ValueError("AIの層数が不正です。")
-        inputs = OBSERVATION_SIZE
+        inputs = OBSERVATION_SIZES[self.observation_id]
         self.layers = []
         for index, layer in enumerate(layers):
             weights, biases = layer["weights"], layer["biases"]
@@ -41,7 +42,7 @@ class Policy:
     def logits(self, game):
         if asdict(game.rules) != self.rules:
             raise ValueError("AIの学習ルールとゲームのルールが一致しません。")
-        values = observation(game)
+        values = observation(game, self.observation_id)
         for weights, biases, activation in self.layers:
             values = [b + fsum(w * x for w, x in zip(row, values))
                       for row, b in zip(weights, biases)]

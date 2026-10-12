@@ -12,6 +12,10 @@ const presets: Record<string, Preset> = {
   'wide-network': { label: '隠れ層128,128（約105万手）', config: { timesteps: 1048576, hidden: [128, 128] } },
   'long-horizon': { label: '割引率0.999（約105万手）', config: { timesteps: 1048576, gamma: 0.999 } },
   'score-reward': { label: '得点比例報酬（約105万手）', config: { timesteps: 1048576, reward: 'score' } },
+  'relations-log': { label: '盤面特徴・対数報酬（約419万手）', config: { timesteps: 4194304, observation: 'relations-v2', reward: 'log_score' } },
+  'relations-score': { label: '盤面特徴・得点比例（約419万手）', config: { timesteps: 4194304, observation: 'relations-v2', reward: 'score' } },
+  'relations-shaped': { label: '盤面特徴・補助報酬（約419万手）', config: { timesteps: 4194304, observation: 'relations-v2', reward: 'score_potential', shaping_coef: 0.2 } },
+  'relations-repeat': { label: '盤面特徴・補助報酬・3seed（約419万手／回）', config: { timesteps: 4194304, observation: 'relations-v2', reward: 'score_potential', shaping_coef: 0.2 }, repeats: 3 },
 };
 type Job = { id: string; kind: string; name: string; status: string; config?: Config; note: string; created: number; order: number; error?: string; parent?: string; best?: string; latest?: string; best_score?: number; condition?: Condition; baselines?: { agents: Record<string, { mean_score: number }> }; progress: Record<string, number | string>; history: History[] };
 type History = { timesteps: number; seconds: number; validation_mean_score: number | null; validation_complete?: boolean };
@@ -19,12 +23,13 @@ type Model = { id: string; job: string | null; name: string; timesteps: number; 
 type Condition = { id: string; name: string; purpose: string; seeds: number[]; max_steps: number };
 type State = { environment: Record<string, boolean>; jobs: Job[]; models: Model[]; conditions: Condition[]; importable: string[] };
 type Episode = { seed: number; score: string; moves: number; merged_max: string; terminated: boolean; truncated: boolean; inference_ms_per_move: number };
-type Report = { complete: boolean; condition: Condition; agents: Record<string, { name: string; complete: boolean; episodes: Episode[]; mean_score: number | null; median_score: number | null; score_std: number | null; mean_moves: number | null; max_merged: string; truncated_episodes: number; mean_inference_ms: number | null; seed_history_known: boolean; reach_rates: Record<string, number>; representatives?: Record<string, number> }> };
+type Report = { complete: boolean; condition: Condition; agents: Record<string, { name: string; complete: boolean; episodes: Episode[]; mean_score: number | null; median_score: number | null; score_std: number | null; score_15000_rate?: number | null; score_p10?: number | null; mean_moves: number | null; max_merged: string; truncated_episodes: number; mean_inference_ms: number | null; seed_history_known: boolean; reach_rates: Record<string, number>; representatives?: Record<string, number> }> };
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const input = (id: string) => $<HTMLInputElement>(id);
 const select = (id: string) => $<HTMLSelectElement>(id);
 const escape = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const number = (s: unknown) => typeof s === 'number' ? s.toLocaleString('ja-JP', { maximumFractionDigits: 2 }) : s == null ? '—' : escape(s);
+const percent = (s: number | null | undefined) => s == null ? '—' : number(s * 100) + '%';
 const statuses: Record<string, string> = { queued: '待機', running: '実行中', stopping: '停止処理中', stopped: '保存して停止', completed: '完了', failed: '失敗', canceled: '取消', interrupted: '中断', imported: '取込済' };
 const statusLabel = (j: Job) => j.status === 'stopped' && j.kind !== 'train' ? '中止' : statuses[j.status] || escape(j.status);
 const token = document.querySelector<HTMLMetaElement>('meta[name=dtn-token]')!.content;
@@ -84,17 +89,18 @@ async function action(path: string, data: Record<string, unknown>, unique = fals
 const fields: [string, string, number, number, string?][] = [
   ['learning_rate', '学習率', .0000001, .1, '0.00001'], ['n_envs', '並列環境数', 1, 32], ['threads', 'CPUスレッド数', 1, 32],
   ['n_steps', 'ロールアウト手数／環境', 2, 8192], ['batch_size', 'バッチ数', 2, 8192], ['n_epochs', '更新回数', 1, 100],
-  ['gamma', '割引率', .01, 1, '.001'], ['ent_coef', 'エントロピー係数', 0, 1, '.001'], ['max_steps', '1ゲームの手数上限', 1, 10000],
+  ['gamma', '割引率', .01, 1, '.001'], ['ent_coef', 'エントロピー係数', 0, 1, '.001'], ['shaping_coef', '補助報酬係数（補助報酬方式のみ）', 0, 10, '.01'], ['max_steps', '1ゲームの手数上限', 1, 10000],
   ['checkpoint_steps', '保存・定期検証の間隔', 1, 10000000], ['eval_seed_start', '定期検証の開始seed', 0, 4294967295], ['eval_episodes', '定期検証のゲーム数', 1, 1000]
 ];
-$('advanced').innerHTML = fields.map(([key, label, min, max, step]) => `<label>${label}<input id="cfg-${key}" type="number" min="${min}" max="${max}" step="${step ? 'any' : 1}" required></label>`).join('') + '<label>隠れ層（カンマ区切り）<input id="cfg-hidden" pattern="[0-9]+(,[0-9]+){0,2}" required></label><label>報酬方式<select id="cfg-reward"><option value="log_score">log2(1 + 合体得点) / 16</option><option value="score">合体得点 / 256</option></select></label>';
+$('advanced').innerHTML = fields.map(([key, label, min, max, step]) => `<label>${label}<input id="cfg-${key}" type="number" min="${min}" max="${max}" step="${step ? 'any' : 1}" required></label>`).join('') + '<label>隠れ層（カンマ区切り）<input id="cfg-hidden" pattern="[0-9]+(,[0-9]+){0,2}" required></label><label>盤面の入力<select id="cfg-observation"><option value="exponents-v1">数字のみ（34値）</option><option value="relations-v2">数字・隣接関係・列の高さ（178値）</option></select></label><label>報酬方式<select id="cfg-reward"><option value="log_score">log2(1 + 合体得点) / 16</option><option value="score">合体得点 / 256</option><option value="score_potential">得点比例＋盤面改善の補助報酬</option></select></label>';
 function fill(config: Config) {
-  for (const [key] of fields) input('cfg-' + key).value = String(config[key]);
+  for (const [key] of fields) input('cfg-' + key).value = String(config[key] ?? (key === 'shaping_coef' ? 0.2 : ''));
   input('cfg-hidden').value = (config.hidden as number[]).join(','); select('cfg-reward').value = String(config.reward);
+  select('cfg-observation').value = String(config.observation || 'exponents-v1');
   input('timesteps').value = String(config.timesteps); input('seed').value = String(config.seed);
 }
 function configuration(): Config {
-  const config: Config = { ...defaults, timesteps: Number(input('timesteps').value), seed: Number(input('seed').value), hidden: input('cfg-hidden').value.split(',').map(Number), reward: select('cfg-reward').value };
+  const config: Config = { ...defaults, timesteps: Number(input('timesteps').value), seed: Number(input('seed').value), hidden: input('cfg-hidden').value.split(',').map(Number), reward: select('cfg-reward').value, observation: select('cfg-observation').value };
   for (const [key] of fields) config[key] = Number(input('cfg-' + key).value);
   return config;
 }
@@ -214,7 +220,7 @@ function renderChart() {
   series.forEach((s, index) => { const color = colors[index % colors.length]; const points = s.rows.map((r, i) => { const window = s.rows.slice(Math.max(0, i - smooth + 1), i + 1); return `${x(r[axis])},${y(window.reduce((n, r) => n + r.validation_mean_score!, 0) / window.length)}`; }); svg += `<polyline points="${points.join(' ')}" fill="none" stroke="${color}" stroke-width="2"/>` + s.rows.map(r => `<circle cx="${x(r[axis])}" cy="${y(r.validation_mean_score!)}" r="3" fill="${color}"><title>${escape(s.job.name)}: ${number(r.validation_mean_score)}点 / ${number(r.timesteps)}手</title></circle>`).join(''); });
   baselines.forEach(b => { svg += `<line x1="${left}" x2="${width - right}" y1="${y(b.value)}" y2="${y(b.value)}" stroke="#8194a5" stroke-dasharray="6 5"><title>${escape(b.name)}: ${number(b.value)}点（同じ定期検証条件）</title></line>`; });
   $('chart').innerHTML = svg + '</svg><div class="legend">' + series.map((s, i) => `<span><i style="background:${colors[i % colors.length]}"></i>${escape(s.job.name)}</span>`).join('') + baselines.map(b => `<span>${escape(b.name)} ${number(b.value)}点（破線）</span>`).join('') + '</div>';
-  const keys = ['seed', 'reward', 'learning_rate', 'hidden', 'n_envs', 'n_steps', 'eval_seed_start', 'eval_episodes', 'max_steps'];
+  const keys = ['seed', 'observation', 'reward', 'shaping_coef', 'learning_rate', 'hidden', 'n_envs', 'n_steps', 'eval_seed_start', 'eval_episodes', 'max_steps'];
   $('config-comparison').innerHTML = '<div class="table-wrap"><table><thead><tr><th>条件</th>' + jobs.map(j => `<th>${escape(j.name)}</th>`).join('') + '</tr></thead><tbody>' + keys.map(key => `<tr><th>${key}</th>${jobs.map(j => `<td>${escape(j.config?.[key])}</td>`).join('')}</tr>`).join('') + '</tbody></table></div>';
 }
 function renderModels() {
@@ -252,10 +258,10 @@ function renderModels() {
 function reportHTML(key: string, report: Report) {
   const maxScore = Math.max(1, ...Object.values(report.agents).flatMap(r => r.episodes.map(e => Number(e.score))));
   let content = `<p>${report.complete ? '完了' : '途中結果'} / ${escape(report.condition.name)} / ${escape(report.condition.purpose)} / ${report.condition.seeds.length}ゲーム / seed ${report.condition.seeds[0]}～${report.condition.seeds.at(-1)} / 上限${report.condition.max_steps}手</p><div class="row">` + ['json', 'csv', 'html'].map(f => `<a href="/api/export/report/${key}?format=${f}">${f.toUpperCase()}を書き出す</a>`).join('') + '</div>';
-  content += '<div class="table-wrap"><table><thead><tr><th>対象</th><th>完了数</th><th>平均得点</th><th>中央値</th><th>標準偏差</th><th>平均手数</th><th>最大値</th><th>状態</th></tr></thead><tbody>' + Object.values(report.agents).map(r => `<tr><td>${escape(r.name)}</td><td>${r.episodes.length}</td><td>${number(r.mean_score)}</td><td>${number(r.median_score)}</td><td>${number(r.score_std)}</td><td>${number(r.mean_moves)}</td><td>${escape(r.max_merged)}</td><td>${r.complete ? '完了' : '途中結果'}</td></tr>`).join('') + '</tbody></table></div>';
+  content += '<div class="table-wrap"><table><thead><tr><th>対象</th><th>完了数</th><th>平均得点</th><th>中央値</th><th>15,000点以上</th><th>下位10%点</th><th>標準偏差</th><th>平均手数</th><th>最大値</th><th>状態</th></tr></thead><tbody>' + Object.values(report.agents).map(r => `<tr><td>${escape(r.name)}</td><td>${r.episodes.length}</td><td>${number(r.mean_score)}</td><td>${number(r.median_score)}</td><td>${percent(r.score_15000_rate)}</td><td>${number(r.score_p10)}</td><td>${number(r.score_std)}</td><td>${number(r.mean_moves)}</td><td>${escape(r.max_merged)}</td><td>${r.complete ? '完了' : '途中結果'}</td></tr>`).join('') + '</tbody></table></div>';
   content += `<p class="muted">${report.complete ? '全対象が同じ' + report.condition.seeds.length + ' seedで完了。' : '途中結果は対象ごとに完了数が異なることがあります。完了した同条件の結果で比較してください。'}</p>`;
   for (const [agent, r] of Object.entries(report.agents)) {
-    content += `<h3>${escape(r.name)} <small class="muted">${r.complete ? '完了' : '途中結果'} ${r.episodes.length}ゲーム${r.seed_history_known ? '' : ' / seed履歴不明・未使用条件の認定不可'}</small></h3><div class="stats">` + [['平均得点', r.mean_score], ['中央値', r.median_score], ['標準偏差', r.score_std], ['平均手数', r.mean_moves], ['最大合成値', r.max_merged]].map(([title, value]) => `<div><small>${title}</small><strong>${number(value)}</strong></div>`).join('') + `</div><p class="muted">終了 ${r.episodes.length - r.truncated_episodes}ゲーム / 上限打ち切り ${r.truncated_episodes}ゲーム / 平均推論 ${number(r.mean_inference_ms)} ms／手</p>`;
+    content += `<h3>${escape(r.name)} <small class="muted">${r.complete ? '完了' : '途中結果'} ${r.episodes.length}ゲーム${r.seed_history_known ? '' : ' / seed履歴不明・未使用条件の認定不可'}</small></h3><div class="stats">` + [['平均得点', r.mean_score], ['中央値', r.median_score], ['15,000点以上', percent(r.score_15000_rate)], ['下位10%点', r.score_p10], ['標準偏差', r.score_std], ['平均手数', r.mean_moves], ['最大合成値', r.max_merged]].map(([title, value]) => `<div><small>${title}</small><strong>${number(value)}</strong></div>`).join('') + `</div><p class="muted">下位10%点: 得点分布の10パーセンタイル。終了 ${r.episodes.length - r.truncated_episodes}ゲーム / 上限打ち切り ${r.truncated_episodes}ゲーム / 平均推論 ${number(r.mean_inference_ms)} ms／手</p>`;
     const scores = r.episodes.map(e => Number(e.score)), max = maxScore, bins = Array(10).fill(0) as number[]; scores.forEach(s => bins[Math.min(9, Math.floor(s / max * 10))]++);
     const highest = Math.max(1, ...bins); content += '<div class="histogram" aria-label="得点分布">' + bins.map((n, i) => `<div title="${Math.round(max * i / 10)}～${Math.round(max * (i + 1) / 10)}点: ${n}ゲーム"><small>${n}</small><span style="height:${n / highest * 100}px"></span><small>${Math.round(max * i / 10)}</small></div>`).join('') + '</div>';
     content += '<div class="table-wrap"><table><thead><tr>' + Object.keys(r.reach_rates).map(n => `<th>≥ ${n}</th>`).join('') + '</tr></thead><tbody><tr>' + Object.values(r.reach_rates).map(rate => `<td>${number(rate * 100)}%</td>`).join('') + '</tr></tbody></table></div><div class="row">';

@@ -14,13 +14,20 @@ from pathlib import Path
 
 from drop_the_number.agents.policy import Policy
 from drop_the_number.agents.files import atomic_json as write
+from drop_the_number.agents.observation import OBSERVATION_ID, OBSERVATION_SIZES
 
 
 def read(path, fallback=None):
-    try:
-        return json.loads(Path(path).read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError):
-        return fallback
+    for attempt in range(20):
+        try:
+            return json.loads(Path(path).read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            return fallback
+        except PermissionError:
+            # Atomic replacement can briefly deny a concurrent Windows reader.
+            if attempt == 19:
+                raise
+            time.sleep(.05)
 
 
 def identifier(value):
@@ -53,8 +60,13 @@ def check_config(config):
     hidden = config.get("hidden")
     if not isinstance(hidden,list) or not 1 <= len(hidden) <= 3 or any(type(n) is not int or not 1 <= n <= 128 for n in hidden):
         raise ValueError("隠れ層は1～3層、各1～128ユニットです。")
-    if config.get("reward") not in ("log_score","score"):
+    if config.get("reward") not in ("log_score","score","score_potential"):
         raise ValueError("報酬方式が不正です。")
+    if config.get("observation", OBSERVATION_ID) not in OBSERVATION_SIZES:
+        raise ValueError("観測形式が不正です。")
+    coefficient = config.get("shaping_coef", .2)
+    if type(coefficient) not in (int, float) or not math.isfinite(coefficient) or not 0 <= coefficient <= 10:
+        raise ValueError("補助報酬係数は0～10です。")
 
 
 class Manager:
@@ -141,6 +153,9 @@ class Manager:
                 raise ValueError("追加学習には最適化状態付きモデルが必要です。推論用JSONでは追加学習できません。")
             metadata = self.model_data(model).get("metadata", {})
             original = metadata["config"]
+            for key, default in (("observation", OBSERVATION_ID), ("shaping_coef", .2)):
+                if config.get(key, default) != original.get(key, default):
+                    raise ValueError("追加学習では観測形式・補助報酬設定を変更できません。新規学習を使用してください。")
             for key in original:
                 if key not in ("timesteps","seed","eval_seed_start","eval_episodes","checkpoint_steps") and config.get(key) != original[key]:
                     raise ValueError("追加学習ではモデル構成・報酬・PPO設定を変更できません。設定を引き継いでください。")
@@ -440,7 +455,14 @@ class Manager:
                     metrics.append(json.loads(line))
                 except json.JSONDecodeError:
                     pass  # The worker may currently be appending this last line.
-        return {"job":job,"report":read(directory / "evaluation.json"),"log":log,"updates":metrics,
+        report = read(directory / "evaluation.json")
+        if report:
+            from drop_the_number.agents.evaluation import summarize
+            for result in report["agents"].values():
+                if "score_15000_rate" not in result:
+                    statistics = summarize(result["episodes"])
+                    result.update({key: statistics[key] for key in ("score_15000_rate", "score_p10")})
+        return {"job":job,"report":report,"log":log,"updates":metrics,
                 "metadata":read(directory / "training" / "config.json")}
 
     def close(self):

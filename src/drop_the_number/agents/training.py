@@ -20,13 +20,16 @@ from drop_the_number import __version__
 from drop_the_number.core import Rules
 from drop_the_number.env import DropNumberEnv
 from .evaluation import evaluate
-from .observation import OBSERVATION_ID
+from .observation import OBSERVATION_ID, OBSERVATION_SIZES
 from .policy import POLICY_SCHEMA, Policy
 from .files import atomic_json, replace
 from .baselines import GreedyAgent, RandomAgent
 
 
 def export_actor(model, metadata=None):
+    kind = (metadata or {}).get("config", {}).get("observation", OBSERVATION_ID)
+    if kind not in OBSERVATION_SIZES or model.observation_space.shape != (OBSERVATION_SIZES[kind],):
+        raise ValueError("モデルと書き出し設定の観測形式が一致しません。")
     layers = []
     modules = list(model.policy.mlp_extractor.policy_net)
     for index in range(0, len(modules), 2):
@@ -39,7 +42,7 @@ def export_actor(model, metadata=None):
     layers.append({"weights": linear.weight.detach().cpu().tolist(),
                    "biases": linear.bias.detach().cpu().tolist(), "activation": "linear"})
     data = {"schema": POLICY_SCHEMA, "engine": __version__, "rules": asdict(Rules()),
-            "observation": OBSERVATION_ID, "name": f"PPO / {model.num_timesteps:,}手",
+            "observation": kind, "name": f"PPO / {model.num_timesteps:,}手",
             "metadata": metadata or {}, "layers": layers}
     Policy(data)
     return data
@@ -67,8 +70,13 @@ def validate_config(config):
         raise ValueError("検証seedの範囲が不正です。")
     if type(config.get("seed")) is not int or not 0 <= config["seed"] < 2**32:
         raise ValueError("学習seedの範囲が不正です。")
-    if config.get("reward") not in ("log_score", "score"):
+    if config.get("reward") not in ("log_score", "score", "score_potential"):
         raise ValueError("報酬方式が不正です。")
+    if config.get("observation", OBSERVATION_ID) not in OBSERVATION_SIZES:
+        raise ValueError("観測形式が不正です。")
+    coefficient = config.get("shaping_coef", .2)
+    if type(coefficient) not in (int, float) or not isfinite(coefficient) or not 0 <= coefficient <= 10:
+        raise ValueError("補助報酬係数は0～10です。")
 
 
 def train(config, output, *, resume=None, parent_metadata=None, reserved_seeds=(),
@@ -85,7 +93,9 @@ def train(config, output, *, resume=None, parent_metadata=None, reserved_seeds=(
     if inherited & set(validation_seeds):
         raise ValueError("親モデルの学習seedと定期検証seedが重複します。")
     torch.set_num_threads(config["threads"])
-    environments = [DropNumberEnv(config["max_steps"], config["reward"], reserved_seeds=excluded) for _ in range(config["n_envs"])]
+    environments = [DropNumberEnv(config["max_steps"], config["reward"], reserved_seeds=excluded,
+                    observation_id=config.get("observation", OBSERVATION_ID), gamma=config["gamma"],
+                    shaping_coef=config.get("shaping_coef", .2)) for _ in range(config["n_envs"])]
     vec = DummyVecEnv([lambda env=env: Monitor(env) for env in environments])
     started = perf_counter()
     class StopAfterUpdate(Exception):

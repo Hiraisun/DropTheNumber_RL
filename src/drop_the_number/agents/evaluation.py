@@ -33,10 +33,16 @@ def episode(agent, seed, max_steps=1000):
 def summarize(rows):
     if not rows:
         return {"episodes": [], "mean_score": None, "score_std": None, "median_score": None,
-                "mean_moves": None, "max_merged": "0", "truncated_episodes": 0, "mean_inference_ms": None, "reach_rates": {}}
+                "mean_moves": None, "max_merged": "0", "truncated_episodes": 0, "mean_inference_ms": None, "reach_rates": {},
+                "score_15000_rate": None, "score_p10": None}
     scores = [int(row["score"]) for row in rows]
     mean = fsum(scores) / len(scores)
+    ordered = sorted(scores)
+    position = (len(ordered) - 1) * .1
+    lower = int(position)
+    p10 = ordered[lower] + (ordered[min(lower + 1, len(ordered) - 1)] - ordered[lower]) * (position - lower)
     return {"episodes": rows, "mean_score": mean, "median_score": median(scores),
+            "score_15000_rate": sum(score >= 15000 for score in scores) / len(scores), "score_p10": p10,
             "score_std": sqrt(fsum((s - mean) ** 2 for s in scores) / len(scores)),
             "mean_moves": fsum(row["moves"] for row in rows) / len(rows),
             "max_merged": str(max(int(row["merged_max"]) for row in rows)),

@@ -6,7 +6,7 @@ import pytest
 from drop_the_number import __version__
 from drop_the_number.core import Game
 from drop_the_number.agents.baselines import GreedyAgent, RandomAgent
-from drop_the_number.agents.observation import observation, OBSERVATION_ID
+from drop_the_number.agents.observation import observation, OBSERVATION_ID, RELATIONS_ID, OBSERVATION_SIZES
 from drop_the_number.agents.policy import Policy, POLICY_SCHEMA
 from drop_the_number.agents.evaluation import episode
 from drop_the_number.replay import reconstruct
@@ -19,17 +19,43 @@ def tiny_policy():
                  "biases": [0, .1, -.2, .3, -.4], "activation": "linear"}]}
 
 
-def test_observation_and_agents_ignore_hidden_state_and_do_not_mutate():
+@pytest.mark.parametrize("kind", [OBSERVATION_ID, RELATIONS_ID])
+def test_observation_and_agents_ignore_hidden_state_and_do_not_mutate(kind):
     first, other = Game(1), Game(2)
     other.board = deepcopy(first.board)
     other.current, other.next, other.merged_max = first.current, first.next, first.merged_max
     other.score = 999999
-    assert observation(first) == observation(other)
-    for agent in (GreedyAgent(), Policy(tiny_policy())):
+    assert observation(first, kind) == observation(other, kind)
+    data = tiny_policy()
+    data["observation"] = kind
+    data["layers"][0]["weights"] = [[(r-c)/64 for c in range(OBSERVATION_SIZES[kind])] for r in range(5)]
+    for agent in (GreedyAgent(), Policy(data)):
         before = first.snapshot()
         assert agent.choose(first) == agent.choose(other)
         assert first.snapshot() == before
-    assert len(observation(first)) == 34
+    assert len(observation(first, kind)) == OBSERVATION_SIZES[kind]
+
+
+def test_relational_observation_encodes_equal_blocks_not_empty_or_diagonal_edges():
+    game = Game(1)
+    game.current, game.next = 16, 32
+    game.board[4] = [8,16,0,0,4]
+    game.board[5] = [16,16,32,0,2]
+    values = observation(game, RELATIONS_ID)
+    assert values[89] == 1 and values[121] == 1
+    assert values[144:148] == [1,0,0,0]
+    assert values[169] == 1
+    assert sum(values[124:148]) == 1 and sum(values[148:173]) == 1
+    assert values[173:] == [2/6,2/6,1/6,0,2/6]
+
+
+def test_score_target_rate_and_lower_decile_use_all_games():
+    from drop_the_number.agents.evaluation import summarize
+    rows=[{"score":str(n),"moves":20,"merged_max":"512","truncated":False,"inference_ms_per_move":1} for n in (1000,15000,20000)]
+    result=summarize(rows)
+    assert result["score_15000_rate"] == pytest.approx(2/3)
+    assert result["score_p10"] == pytest.approx(3800)
+    assert summarize([])["score_15000_rate"] is None
 
 
 def test_bad_policy_weights_and_dimensions_are_rejected():

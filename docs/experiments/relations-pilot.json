@@ -1,0 +1,673 @@
+{
+  "date": "2026-10-12",
+  "purpose": "pilot-comparison",
+  "training_timesteps": 131072,
+  "training_seed": 20261012,
+  "evaluation": {
+    "schema": "drop-number/evaluation-v1",
+    "engine": "0.1.0",
+    "rules": {
+      "id": "prototype-v2",
+      "columns": 5,
+      "rows": 6,
+      "initial_spawn_max": 4,
+      "spawn_min": 2,
+      "spawn_cap": 128,
+      "cleanup": "none-unverified"
+    },
+    "deterministic": true,
+    "condition": {
+      "id": "condition-cf58f6cf970a",
+      "name": "盤面特徴の動作確認・16ゲーム",
+      "purpose": "comparison",
+      "seeds": [
+        3000100000,
+        3000100001,
+        3000100002,
+        3000100003,
+        3000100004,
+        3000100005,
+        3000100006,
+        3000100007,
+        3000100008,
+        3000100009,
+        3000100010,
+        3000100011,
+        3000100012,
+        3000100013,
+        3000100014,
+        3000100015
+      ],
+      "max_steps": 1000
+    },
+    "agents": {
+      "train-e8164e110beb-step-131072": {
+        "episodes": [
+          {
+            "seed": 3000100000,
+            "score": "120",
+            "merged_max": "32",
+            "moves": 24,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5750374960674284
+          },
+          {
+            "seed": 3000100001,
+            "score": "292",
+            "merged_max": "64",
+            "moves": 36,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5634027798401399
+          },
+          {
+            "seed": 3000100002,
+            "score": "248",
+            "merged_max": "64",
+            "moves": 33,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5690242343751545
+          },
+          {
+            "seed": 3000100003,
+            "score": "536",
+            "merged_max": "64",
+            "moves": 47,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5658234053469718
+          },
+          {
+            "seed": 3000100004,
+            "score": "148",
+            "merged_max": "64",
+            "moves": 29,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5635413810899802
+          },
+          {
+            "seed": 3000100005,
+            "score": "388",
+            "merged_max": "64",
+            "moves": 45,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5625555459927354
+          },
+          {
+            "seed": 3000100006,
+            "score": "1456",
+            "merged_max": "256",
+            "moves": 68,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5582441158099648
+          },
+          {
+            "seed": 3000100007,
+            "score": "2020",
+            "merged_max": "512",
+            "moves": 60,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5652816684839005
+          },
+          {
+            "seed": 3000100008,
+            "score": "1968",
+            "merged_max": "512",
+            "moves": 52,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5648076923814818
+          },
+          {
+            "seed": 3000100009,
+            "score": "816",
+            "merged_max": "256",
+            "moves": 53,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.7494207579238376
+          },
+          {
+            "seed": 3000100010,
+            "score": "892",
+            "merged_max": "128",
+            "moves": 51,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5766941113488785
+          },
+          {
+            "seed": 3000100011,
+            "score": "512",
+            "merged_max": "128",
+            "moves": 48,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5641062501429891
+          },
+          {
+            "seed": 3000100012,
+            "score": "376",
+            "merged_max": "128",
+            "moves": 39,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5766205140389502
+          },
+          {
+            "seed": 3000100013,
+            "score": "496",
+            "merged_max": "64",
+            "moves": 49,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5705448981773641
+          },
+          {
+            "seed": 3000100014,
+            "score": "372",
+            "merged_max": "64",
+            "moves": 48,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5731604166309504
+          },
+          {
+            "seed": 3000100015,
+            "score": "796",
+            "merged_max": "128",
+            "moves": 49,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 0.5733040814782132
+          }
+        ],
+        "mean_score": 714.75,
+        "median_score": 504.0,
+        "score_15000_rate": 0.0,
+        "score_p10": 198.0,
+        "score_std": 581.132891428458,
+        "mean_moves": 45.6875,
+        "max_merged": "512",
+        "truncated_episodes": 0,
+        "mean_inference_ms": 0.5794730843205588,
+        "reach_rates": {
+          "128": 0.5,
+          "256": 0.25,
+          "512": 0.125,
+          "1024": 0.0,
+          "2048": 0.0,
+          "4096": 0.0,
+          "8192": 0.0,
+          "16384": 0.0,
+          "65536": 0.0
+        },
+        "complete": true,
+        "name": "数字のみ・得点比例／比較確認 / 131072手",
+        "model_sha256": "b612140a3622b04750f3799496dca6e096f2e45fd76f96ce4a0b578fc89400eb",
+        "seed_history_known": true,
+        "overlapping_seeds": [],
+        "representatives": {
+          "worst": 0,
+          "median": 11,
+          "best": 7
+        }
+      },
+      "train-500021f19fb4-step-131072": {
+        "episodes": [
+          {
+            "seed": 3000100000,
+            "score": "2948",
+            "merged_max": "512",
+            "moves": 75,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2139146643069882
+          },
+          {
+            "seed": 3000100001,
+            "score": "2152",
+            "merged_max": "256",
+            "moves": 71,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2152253487803253
+          },
+          {
+            "seed": 3000100002,
+            "score": "4152",
+            "merged_max": "1024",
+            "moves": 87,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.3024425267873483
+          },
+          {
+            "seed": 3000100003,
+            "score": "5480",
+            "merged_max": "1024",
+            "moves": 92,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2312630481218272
+          },
+          {
+            "seed": 3000100004,
+            "score": "3616",
+            "merged_max": "512",
+            "moves": 81,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2096395100938317
+          },
+          {
+            "seed": 3000100005,
+            "score": "2684",
+            "merged_max": "256",
+            "moves": 76,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2251065782038495
+          },
+          {
+            "seed": 3000100006,
+            "score": "2988",
+            "merged_max": "512",
+            "moves": 77,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2434376607794169
+          },
+          {
+            "seed": 3000100007,
+            "score": "4172",
+            "merged_max": "512",
+            "moves": 92,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2553782605960884
+          },
+          {
+            "seed": 3000100008,
+            "score": "2172",
+            "merged_max": "512",
+            "moves": 62,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2215032212195858
+          },
+          {
+            "seed": 3000100009,
+            "score": "5396",
+            "merged_max": "512",
+            "moves": 100,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2274560035439208
+          },
+          {
+            "seed": 3000100010,
+            "score": "1328",
+            "merged_max": "128",
+            "moves": 64,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2054906228513573
+          },
+          {
+            "seed": 3000100011,
+            "score": "5492",
+            "merged_max": "1024",
+            "moves": 99,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2272636363790794
+          },
+          {
+            "seed": 3000100012,
+            "score": "4672",
+            "merged_max": "1024",
+            "moves": 77,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.220151949099374
+          },
+          {
+            "seed": 3000100013,
+            "score": "1328",
+            "merged_max": "256",
+            "moves": 56,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.231141071392423
+          },
+          {
+            "seed": 3000100014,
+            "score": "6856",
+            "merged_max": "1024",
+            "moves": 103,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2168359204683705
+          },
+          {
+            "seed": 3000100015,
+            "score": "3084",
+            "merged_max": "512",
+            "moves": 85,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.235878821599352
+          }
+        ],
+        "mean_score": 3657.5,
+        "median_score": 3350.0,
+        "score_15000_rate": 0.0,
+        "score_p10": 1740.0,
+        "score_std": 1561.9390993249385,
+        "mean_moves": 81.0625,
+        "max_merged": "1024",
+        "truncated_episodes": 0,
+        "mean_inference_ms": 1.230133052763946,
+        "reach_rates": {
+          "128": 1.0,
+          "256": 0.9375,
+          "512": 0.75,
+          "1024": 0.3125,
+          "2048": 0.0,
+          "4096": 0.0,
+          "8192": 0.0,
+          "16384": 0.0,
+          "65536": 0.0
+        },
+        "complete": true,
+        "name": "盤面特徴・得点比例／比較確認 / 131072手",
+        "model_sha256": "375aec904af4d5be4d8299e5d0f20e87033678d953c13f7ecf70ca9107b224cd",
+        "seed_history_known": true,
+        "overlapping_seeds": [],
+        "representatives": {
+          "worst": 10,
+          "median": 4,
+          "best": 14
+        }
+      },
+      "train-e7f5b14d4878-step-131072": {
+        "episodes": [
+          {
+            "seed": 3000100000,
+            "score": "1460",
+            "merged_max": "512",
+            "moves": 63,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2188984103323448
+          },
+          {
+            "seed": 3000100001,
+            "score": "5008",
+            "merged_max": "1024",
+            "moves": 86,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2060232571499465
+          },
+          {
+            "seed": 3000100002,
+            "score": "3252",
+            "merged_max": "512",
+            "moves": 91,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2483043969700953
+          },
+          {
+            "seed": 3000100003,
+            "score": "1080",
+            "merged_max": "256",
+            "moves": 63,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2420841274664751
+          },
+          {
+            "seed": 3000100004,
+            "score": "2136",
+            "merged_max": "256",
+            "moves": 69,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2326202898596723
+          },
+          {
+            "seed": 3000100005,
+            "score": "1192",
+            "merged_max": "256",
+            "moves": 50,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.240251996787265
+          },
+          {
+            "seed": 3000100006,
+            "score": "3032",
+            "merged_max": "512",
+            "moves": 70,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2296471453737468
+          },
+          {
+            "seed": 3000100007,
+            "score": "1780",
+            "merged_max": "512",
+            "moves": 72,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2450180567813933
+          },
+          {
+            "seed": 3000100008,
+            "score": "5452",
+            "merged_max": "512",
+            "moves": 97,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.24279175196131
+          },
+          {
+            "seed": 3000100009,
+            "score": "1868",
+            "merged_max": "256",
+            "moves": 69,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.246879708217592
+          },
+          {
+            "seed": 3000100010,
+            "score": "1224",
+            "merged_max": "128",
+            "moves": 57,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.225159651591655
+          },
+          {
+            "seed": 3000100011,
+            "score": "1920",
+            "merged_max": "256",
+            "moves": 74,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2280108105089214
+          },
+          {
+            "seed": 3000100012,
+            "score": "3884",
+            "merged_max": "512",
+            "moves": 70,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2069157175054508
+          },
+          {
+            "seed": 3000100013,
+            "score": "1752",
+            "merged_max": "256",
+            "moves": 64,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2466109392335056
+          },
+          {
+            "seed": 3000100014,
+            "score": "2004",
+            "merged_max": "512",
+            "moves": 65,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2579246155487804
+          },
+          {
+            "seed": 3000100015,
+            "score": "1660",
+            "merged_max": "128",
+            "moves": 72,
+            "terminated": true,
+            "truncated": false,
+            "inference_ms_per_move": 1.2075055532881782
+          }
+        ],
+        "mean_score": 2419.0,
+        "median_score": 1894.0,
+        "score_15000_rate": 0.0,
+        "score_p10": 1208.0,
+        "score_std": 1298.9961508795936,
+        "mean_moves": 70.75,
+        "max_merged": "1024",
+        "truncated_episodes": 0,
+        "mean_inference_ms": 1.2327904017860207,
+        "reach_rates": {
+          "128": 1.0,
+          "256": 0.875,
+          "512": 0.5,
+          "1024": 0.0625,
+          "2048": 0.0,
+          "4096": 0.0,
+          "8192": 0.0,
+          "16384": 0.0,
+          "65536": 0.0
+        },
+        "complete": true,
+        "name": "盤面特徴・補助報酬／動作確認 / 131072手",
+        "model_sha256": "235797f9bfc7bf46dc8e26263c417b394d43e8a4cb36b2268aa7826c97b2e1e3",
+        "seed_history_known": true,
+        "overlapping_seeds": [],
+        "representatives": {
+          "worst": 3,
+          "median": 11,
+          "best": 8
+        }
+      }
+    },
+    "complete": true
+  },
+  "training": {
+    "train-e8164e110beb-step-131072": {
+      "config": {
+        "schema": "drop-number/train-v1",
+        "algorithm": "ppo",
+        "observation": "exponents-v1",
+        "seed": 20261012,
+        "timesteps": 131072,
+        "n_envs": 4,
+        "n_steps": 256,
+        "batch_size": 256,
+        "n_epochs": 4,
+        "learning_rate": 0.0003,
+        "gamma": 0.995,
+        "ent_coef": 0.01,
+        "hidden": [
+          64,
+          64
+        ],
+        "reward": "score",
+        "shaping_coef": 0.2,
+        "max_steps": 1000,
+        "checkpoint_steps": 32768,
+        "eval_seed_start": 1000000000,
+        "eval_episodes": 16,
+        "threads": 2
+      },
+      "code_revision": "ebb73cd823923fbe9be1d22cbf9a98604cb8f319-dirty",
+      "code_sha256": "1ddbc2fa2ff2dd58003f280510f6076bd4da295bf1da968428b9bdfdc689eb19",
+      "model_sha256": "b612140a3622b04750f3799496dca6e096f2e45fd76f96ce4a0b578fc89400eb"
+    },
+    "train-500021f19fb4-step-131072": {
+      "config": {
+        "schema": "drop-number/train-v1",
+        "algorithm": "ppo",
+        "observation": "relations-v2",
+        "seed": 20261012,
+        "timesteps": 131072,
+        "n_envs": 4,
+        "n_steps": 256,
+        "batch_size": 256,
+        "n_epochs": 4,
+        "learning_rate": 0.0003,
+        "gamma": 0.995,
+        "ent_coef": 0.01,
+        "hidden": [
+          64,
+          64
+        ],
+        "reward": "score",
+        "shaping_coef": 0.2,
+        "max_steps": 1000,
+        "checkpoint_steps": 32768,
+        "eval_seed_start": 1000000000,
+        "eval_episodes": 16,
+        "threads": 2
+      },
+      "code_revision": "ebb73cd823923fbe9be1d22cbf9a98604cb8f319-dirty",
+      "code_sha256": "1ddbc2fa2ff2dd58003f280510f6076bd4da295bf1da968428b9bdfdc689eb19",
+      "model_sha256": "375aec904af4d5be4d8299e5d0f20e87033678d953c13f7ecf70ca9107b224cd"
+    },
+    "train-e7f5b14d4878-step-131072": {
+      "config": {
+        "schema": "drop-number/train-v1",
+        "algorithm": "ppo",
+        "observation": "relations-v2",
+        "seed": 20261012,
+        "timesteps": 131072,
+        "n_envs": 4,
+        "n_steps": 256,
+        "batch_size": 256,
+        "n_epochs": 4,
+        "learning_rate": 0.0003,
+        "gamma": 0.995,
+        "ent_coef": 0.01,
+        "hidden": [
+          64,
+          64
+        ],
+        "reward": "score_potential",
+        "shaping_coef": 0.2,
+        "max_steps": 1000,
+        "checkpoint_steps": 32768,
+        "eval_seed_start": 1000000000,
+        "eval_episodes": 16,
+        "threads": 2
+      },
+      "code_revision": "ebb73cd823923fbe9be1d22cbf9a98604cb8f319-dirty",
+      "code_sha256": "1ddbc2fa2ff2dd58003f280510f6076bd4da295bf1da968428b9bdfdc689eb19",
+      "model_sha256": "235797f9bfc7bf46dc8e26263c417b394d43e8a4cb36b2268aa7826c97b2e1e3"
+    }
+  }
+}

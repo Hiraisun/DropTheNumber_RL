@@ -101,12 +101,13 @@ def make_server(root, port=8765, *, manager=None):
                             condition=report["condition"]
                             rows="".join("<tr>"+"".join("<td>"+html.escape(str(value))+"</td>" for value in (
                                 result["name"],len(result["episodes"]),result["mean_score"],result.get("median_score"),
+                                str(round(result["score_15000_rate"]*100,2))+"%" if result.get("score_15000_rate") is not None else "—",result.get("score_p10"),
                                 result["score_std"],result["mean_moves"],result["max_merged"],"完了" if result["complete"] else "途中結果"))+"</tr>"
                                 for result in report["agents"].values())
                             content=('<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
                                 '<title>検証結果</title><style>body{font:14px system-ui;max-width:1200px;margin:40px auto;padding:20px}table{border-collapse:collapse;width:100%}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>'
                                 '<h1>検証結果</h1><p>'+html.escape(condition["name"])+f' / {len(condition["seeds"])}ゲーム / 上限{condition["max_steps"]}手 / '+('完了' if report["complete"] else '途中結果')+'</p>'
-                                '<table><thead><tr><th>対象</th><th>ゲーム数</th><th>平均得点</th><th>中央値</th><th>標準偏差</th><th>平均手数</th><th>最大値</th><th>状態</th></tr></thead><tbody>'+rows+'</tbody></table><details><summary>条件・全結果JSON</summary><pre>'+html.escape(json.dumps(report,ensure_ascii=False,indent=2))+"</pre></details></html>")
+                                '<table><thead><tr><th>対象</th><th>ゲーム数</th><th>平均得点</th><th>中央値</th><th>15,000点以上</th><th>下位10%点</th><th>標準偏差</th><th>平均手数</th><th>最大値</th><th>状態</th></tr></thead><tbody>'+rows+'</tbody></table><details><summary>条件・全結果JSON</summary><pre>'+html.escape(json.dumps(report,ensure_ascii=False,indent=2))+"</pre></details></html>")
                             self.send(content,"text/html; charset=utf-8",filename=key+".html")
                         else:
                             self.send(report,filename=key+".json")

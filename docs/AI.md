@@ -44,6 +44,8 @@ uv run --extra rl python -m drop_the_number.ai evaluate --model artifacts/rl/my-
 
 ## 環境とモデル
 
+2026-10-12に178値の関係を含む入力と、得点比例に盤面評価の差分を加える報酬を追加した。[改善実験の仕様と比較手順](AI_IMPROVEMENT.md)、[追加設定](../configs/ppo-relations.json)を参照。以下の34値・対数報酬は初期モデルの設定。
+
 `DropNumberEnv.reset(seed=...)` / `step(action)` が共通の `Game` を直接操作する。[Gymnasiumのカスタム環境API](https://gymnasium.farama.org/introduction/create_custom_env/)
 
 - 行動: 左から0～4の列、`Discrete(5)`。終了する手も合法な選択なので、列の高さによるマスクは設けない。

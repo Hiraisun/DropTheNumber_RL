@@ -111,12 +111,27 @@ def test_atomic_write_survives_a_concurrent_windows_reader(tmp_path):
         reader.close()
 
 
+def test_progress_read_retries_a_transient_windows_permission_error(tmp_path, monkeypatch):
+    from drop_the_number.dashboard.manager import read
+    original = Path.read_text
+    attempts = []
+    path=tmp_path / "progress.json";path.write_text('{"done":true}',encoding="utf-8")
+    def blocked_once(self, *args, **kwargs):
+        attempts.append(self)
+        if len(attempts) == 1:
+            raise PermissionError(13,"file being replaced")
+        return original(self,*args,**kwargs)
+    monkeypatch.setattr(Path,"read_text",blocked_once)
+    assert read(path)=={"done":True} and len(attempts)==2
+
+
 @pytest.mark.parametrize("key,value",[("learning_rate",float("nan")),("n_envs",True),("hidden",[999]),("max_steps",0)])
 def test_config_rejects_invalid_inputs(key,value):
     with pytest.raises(ValueError):check_config({**config(),key:value})
 
 
-def test_training_stop_at_update_boundary_and_continue(tmp_path):
+@pytest.mark.parametrize("kind", ["exponents-v1", "relations-v2"])
+def test_training_stop_at_update_boundary_and_continue(tmp_path, kind):
     pytest.importorskip("stable_baselines3")
     from drop_the_number.agents.training import train
     from drop_the_number.agents.policy import Policy
@@ -125,13 +140,14 @@ def test_training_stop_at_update_boundary_and_continue(tmp_path):
         nonlocal stop
         if row["phase"]=="更新完了":stop=True
     output=tmp_path / "first"
-    train(config(),output,stopped=lambda:stop,progress_callback=progress,reserved_seeds=[config()["seed"]])
+    settings={**config(),"observation":kind,"reward":"score_potential" if kind=="relations-v2" else "log_score"}
+    train(settings,output,stopped=lambda:stop,progress_callback=progress,reserved_seeds=[config()["seed"]])
     data=json.loads((output / "latest.json").read_text(encoding="utf-8"))
     assert data["metadata"]["timesteps"]==32
     assert config()["seed"] not in data["metadata"]["training_seeds"]
     assert not (output / "best.json").exists()
     continued=tmp_path / "continued"
-    train({**config(),"seed":456,"timesteps":32},continued,resume=output / "latest.zip",parent_metadata={**data["metadata"],"model_id":"parent"})
+    train({**settings,"seed":456,"timesteps":32},continued,resume=output / "latest.zip",parent_metadata={**data["metadata"],"model_id":"parent"})
     result=json.loads((continued / "best.json").read_text(encoding="utf-8"))
     assert result["metadata"]["initial_timesteps"]==32 and result["metadata"]["timesteps"]==64
     assert result["metadata"]["parent"]=="parent"
